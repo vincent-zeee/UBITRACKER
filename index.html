@@ -1,0 +1,2265 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>유비 성장기록</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;600&family=Noto+Sans+KR:wght@300;400;500&display=swap');
+
+/* ── 설정: API Key를 여기에 입력하세요 ── */
+/* 파일 열기 전에 ANTHROPIC_API_KEY 변수를 수정하세요 */
+
+:root {
+  --paper: #F9F6F0;
+  --paper2: #F2EDE4;
+  --ink: #2A2620;
+  --ink2: #5C5448;
+  --ink3: #9A9088;
+  --line: #E2D9CC;
+  --accent: #8B7355;
+  --accent-light: #C4A882;
+  --tag-언어: #3B6D11; --tag-언어-bg: #EAF3DE;
+  --tag-자율성: #185FA5; --tag-자율성-bg: #E6F1FB;
+  --tag-감정: #854F0B; --tag-감정-bg: #FAEEDA;
+  --tag-인지: #3C3489; --tag-인지-bg: #EEEDFE;
+  --tag-애착: #993C1D; --tag-애착-bg: #FAECE7;
+  --tag-사회성: #993356; --tag-사회성-bg: #FBEAF0;
+  --tag-신체: #274D0A; --tag-신체-bg: #EAF3DE;
+  --tag-양육: #444441; --tag-양육-bg: #F1EFE8;
+  --tag-기타: #5A564F; --tag-기타-bg: #F0EDE8;
+  --r: 10px;
+}
+
+/* ── 테마: 베이지 (기본) ── */
+body.theme-beige {
+  --accent: #8B7355;
+  --accent-light: #C4A882;
+}
+
+/* ── 테마: 마젠타 핑크 ── */
+body.theme-magenta {
+  --accent: #C2185B;
+  --accent-light: #E91E63;
+}
+
+/* ── 테마: 딥 차콜 ── */
+body.theme-charcoal {
+  --accent: #2C3E50;
+  --accent-light: #5D7691;
+}
+
+/* ── 동기화 상태 ── */
+.sync-status {
+  font-size: 11px;
+  color: var(--accent);
+  padding: 0 24px;
+  margin-top: 4px;
+  min-height: 16px;
+}
+
+/* ── 모바일 반응형 ── */
+@media (max-width: 680px) {
+  .sidebar {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    min-height: auto;
+    height: 60px;
+    flex-direction: row;
+    padding: 0;
+    border-right: none;
+    border-top: 1px solid var(--line);
+    z-index: 100;
+    justify-content: space-around;
+    align-items: center;
+  }
+  .logo { display: none; }
+  .nav-divider { display: none; }
+  .api-status { display: none; }
+  .sync-status { display: none; }
+  .nav-item {
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 6px;
+    font-size: 10px;
+    border-left: none;
+    border-top: 3px solid transparent;
+    flex: 1;
+    justify-content: center;
+    text-align: center;
+  }
+  .nav-item.active {
+    border-left-color: transparent;
+    border-top-color: var(--accent);
+  }
+  .nav-icon { font-size: 18px; width: auto; }
+  .main {
+    margin-left: 0;
+    padding: 20px 16px 80px;
+    max-width: 100%;
+  }
+  .page-title { font-size: 20px; }
+  .input-row { flex-direction: column; align-items: stretch; }
+  .btn-primary { margin-left: 0; }
+  .stat-grid { grid-template-columns: repeat(3, 1fr); }
+  .domain-grid { grid-template-columns: repeat(2, 1fr); }
+  .theory-grid { grid-template-columns: repeat(2, 1fr); }
+  .input-card { padding: 16px; }
+  .timeline-item { padding: 14px 16px; }
+  .report-subtabs { flex-wrap: wrap; gap: 6px; }
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Sans KR', sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100vh;
+}
+
+/* ── 레이아웃 ── */
+.shell { display: flex; min-height: 100vh; }
+
+.sidebar {
+  width: 220px;
+  min-height: 100vh;
+  background: var(--paper2);
+  border-right: 1px solid var(--line);
+  padding: 32px 0;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+}
+
+.logo {
+  padding: 0 24px 28px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 20px;
+}
+.logo-name {
+  font-family: 'Noto Serif KR', serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.3;
+}
+.logo-sub {
+  font-size: 11px;
+  color: var(--ink3);
+  margin-top: 3px;
+  letter-spacing: .04em;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 24px;
+  font-size: 13px;
+  color: var(--ink2);
+  cursor: pointer;
+  border-radius: 0;
+  transition: all .15s;
+  border-left: 3px solid transparent;
+}
+.nav-item:hover { background: rgba(139,115,85,.08); }
+.nav-item.active {
+  color: var(--ink);
+  border-left-color: var(--accent);
+  background: rgba(139,115,85,.1);
+  font-weight: 500;
+}
+.nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+.nav-divider {
+  margin: 12px 24px;
+  border: none;
+  border-top: 1px solid var(--line);
+}
+
+.api-status {
+  margin-top: auto;
+  padding: 16px 24px;
+  border-top: 1px solid var(--line);
+}
+.api-dot {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #ccc;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.api-dot.ok { background: #4CAF50; }
+.api-dot.err { background: #E53935; }
+.api-label { font-size: 11px; color: var(--ink3); }
+
+.main {
+  margin-left: 220px;
+  flex: 1;
+  padding: 40px 48px;
+  max-width: 860px;
+}
+
+/* ── 페이지 ── */
+.page { display: none; }
+.page.active { display: block; }
+
+.page-title {
+  font-family: 'Noto Serif KR', serif;
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.page-sub {
+  font-size: 13px;
+  color: var(--ink3);
+  margin-bottom: 32px;
+}
+
+/* ── 입력 ── */
+.input-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.input-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink3);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+textarea {
+  width: 100%;
+  min-height: 110px;
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  resize: vertical;
+}
+textarea:focus { outline: none; border-color: var(--accent-light); }
+textarea::placeholder { color: var(--ink3); }
+
+.input-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+input[type="date"], select {
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 13px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+}
+input[type="date"]:focus, select:focus { outline: none; border-color: var(--accent-light); }
+
+/* 이미지 업로드 */
+.img-upload-area {
+  border: 1.5px dashed var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .15s;
+  margin-top: 12px;
+  position: relative;
+}
+.img-upload-area:hover { border-color: var(--accent-light); background: rgba(139,115,85,.04); }
+.img-upload-area input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.img-upload-label { font-size: 13px; color: var(--ink3); }
+.img-preview-grid {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.img-thumb {
+  position: relative;
+  width: 72px; height: 72px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+.img-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.img-thumb-del {
+  position: absolute;
+  top: 2px; right: 2px;
+  width: 18px; height: 18px;
+  background: rgba(0,0,0,.55);
+  border-radius: 50%;
+  color: #fff;
+  font-size: 11px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  border: none;
+}
+
+.btn {
+  padding: 9px 20px;
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 13px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all .15s;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink2);
+}
+.btn:hover { background: var(--paper2); }
+.btn:active { transform: scale(.98); }
+.btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+.btn-primary {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+  margin-left: auto;
+}
+.btn-primary:hover { background: var(--ink2); }
+
+/* ── 미리보기 ── */
+.preview-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  display: none;
+  animation: fadeIn .2s ease;
+}
+.preview-card.show { display: block; }
+.preview-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.preview-quote {
+  font-family: 'Noto Serif KR', serif;
+  font-size: 15px;
+  font-style: italic;
+  color: var(--ink2);
+  border-left: 3px solid var(--accent-light);
+  padding-left: 14px;
+  margin: 10px 0;
+  line-height: 1.6;
+}
+.preview-section-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink3);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin: 12px 0 4px;
+}
+.preview-text {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink2);
+}
+.preview-analysis {
+  background: var(--paper);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink);
+  margin-top: 4px;
+}
+.preview-imgs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.preview-imgs img {
+  height: 80px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+}
+.preview-actions { display: flex; gap: 8px; margin-top: 16px; }
+
+/* ── 태그 ── */
+.tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+.tag-언어 { background: var(--tag-언어-bg); color: var(--tag-언어); }
+.tag-자율성 { background: var(--tag-자율성-bg); color: var(--tag-자율성); }
+.tag-감정 { background: var(--tag-감정-bg); color: var(--tag-감정); }
+.tag-인지 { background: var(--tag-인지-bg); color: var(--tag-인지); }
+.tag-애착 { background: var(--tag-애착-bg); color: var(--tag-애착); }
+.tag-사회성 { background: var(--tag-사회성-bg); color: var(--tag-사회성); }
+.tag-신체 { background: var(--tag-신체-bg); color: var(--tag-신체); }
+.tag-양육 { background: var(--tag-양육-bg); color: var(--tag-양육); }
+.tag-기타 { background: var(--tag-기타-bg); color: var(--tag-기타); }
+
+/* ── 타임라인 ── */
+.tl-list { display: flex; flex-direction: column; gap: 0; }
+
+.tl-item {
+  display: grid;
+  grid-template-columns: 64px 24px 1fr;
+  gap: 0 14px;
+}
+.tl-date-col {
+  font-size: 12px;
+  color: var(--ink3);
+  text-align: right;
+  padding-top: 20px;
+  line-height: 1.3;
+}
+.tl-spine {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.tl-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--accent-light);
+  margin-top: 20px;
+  flex-shrink: 0;
+}
+.tl-spine-line {
+  width: 1px;
+  flex: 1;
+  background: var(--line);
+  min-height: 16px;
+}
+.tl-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 14px 16px;
+  margin: 8px 0;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+}
+.tl-card:hover { border-color: var(--accent-light); box-shadow: 0 2px 12px rgba(139,115,85,.08); }
+.tl-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.tl-card-quote {
+  font-family: 'Noto Serif KR', serif;
+  font-size: 14px;
+  font-style: italic;
+  color: var(--ink2);
+  border-left: 2px solid var(--accent-light);
+  padding-left: 10px;
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+.tl-card-summary { font-size: 13px; color: var(--ink2); line-height: 1.6; }
+.tl-card-analysis {
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1.7;
+  margin-top: 10px;
+  background: var(--paper);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: none;
+}
+.tl-card.expanded .tl-card-analysis { display: block; }
+
+/* 편집 모드 */
+.tl-card-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+.tl-edit-btn {
+  font-size: 11px;
+  color: var(--ink3);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 3px 10px;
+  cursor: pointer;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+.tl-edit-btn:hover { background: var(--paper2); color: var(--ink2); }
+.tl-edit-btn.danger:hover { color: #C44; border-color: #E2B0B0; }
+.tl-edit-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 10px;
+  background: var(--paper);
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+.tl-edit-form input[type="date"],
+.tl-edit-form select {
+  font-size: 12px;
+  padding: 6px 10px;
+}
+.tl-edit-form .btn {
+  font-size: 12px;
+  padding: 6px 14px;
+}
+.tl-card-imgs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.tl-card-imgs img {
+  height: 64px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.tl-card-imgs img:hover { opacity: .85; }
+.tl-hint { font-size: 11px; color: var(--ink3); margin-top: 8px; }
+
+/* ── 영역별 ── */
+.domain-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.domain-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.domain-card:hover { border-color: var(--accent-light); }
+.domain-card.sel { border-width: 2px; border-color: var(--accent); }
+.domain-card-name { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+.domain-card-count { font-size: 11px; color: var(--ink3); }
+.domain-bar { height: 3px; background: var(--line); border-radius: 2px; margin-top: 8px; }
+.domain-bar-fill { height: 100%; border-radius: 2px; }
+
+.domain-entries { display: flex; flex-direction: column; gap: 10px; }
+.domain-entry {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.domain-entry-date { font-size: 11px; color: var(--ink3); margin-bottom: 5px; }
+.domain-entry-quote {
+  font-family: 'Noto Serif KR', serif;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--ink2);
+  margin-bottom: 4px;
+}
+.domain-entry-analysis { font-size: 12px; color: var(--ink3); line-height: 1.6; margin-top: 6px; background: var(--paper); padding: 8px 10px; border-radius: 6px; }
+
+/* ── 보고서 ── */
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+.stat-card { background: #fff; border: 1px solid var(--line); border-radius: var(--r); padding: 16px 18px; }
+.stat-label { font-size: 11px; color: var(--ink3); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 6px; }
+.stat-val { font-size: 24px; font-weight: 500; font-family: 'Noto Serif KR', serif; }
+.report-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+.report-list { display: flex; flex-direction: column; gap: 0; }
+.report-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--ink2);
+}
+.report-row-date { font-size: 11px; color: var(--ink3); white-space: nowrap; min-width: 36px; padding-top: 2px; }
+
+/* ── 관찰 포인트 ── */
+.cp-list { display: flex; flex-direction: column; gap: 8px; }
+.cp-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  transition: opacity .15s;
+}
+.cp-item.done { opacity: .45; }
+.cp-dot {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
+  flex-shrink: 0;
+  margin-top: 1px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px;
+  transition: all .15s;
+}
+.cp-item.done .cp-dot { background: var(--ink3); border-color: var(--ink3); color: #fff; }
+.cp-text { font-size: 13px; line-height: 1.5; }
+.cp-sub { font-size: 11px; color: var(--ink3); margin-top: 2px; }
+
+/* ── 설정 ── */
+.settings-card { background: #fff; border: 1px solid var(--line); border-radius: var(--r); padding: 24px; margin-bottom: 16px; }
+
+/* ── 테마 스와치 ── */
+.theme-swatch-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.theme-swatch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 20px;
+  background: var(--paper);
+  cursor: pointer;
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 12px;
+  color: var(--ink2);
+  transition: all .15s;
+}
+.theme-swatch:hover { border-color: var(--accent-light); }
+.theme-swatch.active {
+  border-color: var(--accent);
+  background: #fff;
+  font-weight: 500;
+  color: var(--ink);
+}
+.swatch-dot {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  display: inline-block;
+  border: 1px solid rgba(0,0,0,.1);
+}
+.swatch-label { font-size: 12px; }
+.settings-label { font-size: 13px; font-weight: 500; margin-bottom: 8px; }
+.settings-desc { font-size: 12px; color: var(--ink3); margin-bottom: 12px; line-height: 1.6; }
+.settings-input {
+  width: 100%;
+  font-family: 'Noto Serif KR', monospace;
+  font-size: 13px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+}
+.settings-input:focus { outline: none; border-color: var(--accent-light); }
+.settings-row { display: flex; gap: 10px; margin-top: 10px; align-items: center; }
+.save-msg { font-size: 12px; color: #4CAF50; }
+
+/* ── 이미지 라이트박스 ── */
+.lightbox {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.85);
+  z-index: 999;
+  align-items: center;
+  justify-content: center;
+}
+.lightbox.show { display: flex; }
+.lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 8px; }
+.lightbox-close {
+  position: absolute;
+  top: 20px; right: 24px;
+  color: #fff;
+  font-size: 28px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  line-height: 1;
+}
+
+/* ── 스피너 ── */
+.spin {
+  display: inline-block;
+  width: 13px; height: 13px;
+  border: 2px solid rgba(255,255,255,.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+.spin-dark {
+  border-color: rgba(42,38,32,.2);
+  border-top-color: var(--ink);
+}
+
+/* ── 토스트 ── */
+.toast {
+  position: fixed;
+  bottom: 28px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: var(--paper);
+  padding: 9px 20px;
+  border-radius: 20px;
+  font-size: 13px;
+  opacity: 0;
+  transition: opacity .2s;
+  pointer-events: none;
+  z-index: 1000;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; }
+
+/* ── 유틸 ── */
+.err-msg { font-size: 13px; color: #C62828; padding: 8px 0; }
+.empty { text-align: center; padding: 60px 20px; font-size: 14px; color: var(--ink3); }
+
+/* ── 보고서 서브탭 ── */
+.report-subtab {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-family: 'Noto Sans KR', sans-serif;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--ink3);
+  cursor: pointer;
+  transition: all .15s;
+  margin-bottom: -1px;
+}
+.report-subtab:hover { color: var(--ink); }
+.report-subtab.active { color: var(--ink); border-bottom-color: var(--accent); font-weight: 500; }
+
+/* ── 아카이브 ── */
+.archive-month-btn {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-family: 'Noto Sans KR', sans-serif;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink2);
+  cursor: pointer;
+  transition: all .15s;
+}
+.archive-month-btn:hover { border-color: var(--accent-light); }
+.archive-month-btn.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.archive-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 20px 24px;
+  margin-bottom: 12px;
+}
+.archive-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.archive-card-month { font-size: 13px; font-weight: 500; color: var(--ink2); }
+.archive-card-meta { font-size: 11px; color: var(--ink3); }
+.archive-card-body {
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--ink2);
+  white-space: pre-wrap;
+  max-height: 300px;
+  overflow-y: auto;
+}
+.archive-card-body.expanded { max-height: none; }
+
+/* ── 발달 흐름 탭 ── */
+.flow-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.flow-tab {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-family: 'Noto Sans KR', sans-serif;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink2);
+  cursor: pointer;
+  transition: all .15s;
+}
+.flow-tab:hover { border-color: var(--accent-light); }
+.flow-tab.active {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+.flow-item {
+  display: flex;
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  align-items: flex-start;
+}
+.flow-item:last-child { border-bottom: none; }
+.flow-item-date {
+  font-size: 11px;
+  color: var(--ink3);
+  white-space: nowrap;
+  min-width: 44px;
+  padding-top: 2px;
+}
+.flow-item-content { flex: 1; }
+.flow-item-quote {
+  font-family: 'Noto Serif KR', serif;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--ink2);
+  margin-bottom: 3px;
+}
+.flow-item-analysis {
+  font-size: 12px;
+  color: var(--ink3);
+  line-height: 1.6;
+}
+.report-box {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 24px 28px;
+  font-size: 14px;
+  line-height: 1.9;
+  color: var(--ink2);
+  white-space: pre-wrap;
+  margin-bottom: 8px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ── 반응형 ── */
+@media (max-width: 700px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; padding: 20px 16px; }
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+}
+/* 모바일 반응형은 아래 추가 스타일에서 처리 */
+
+/* ── 모바일 하단 탭바 ── */
+.mobile-nav {
+  display: none;
+}
+
+@media (max-width: 680px) {
+  .mobile-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 60px;
+    background: var(--paper2);
+    border-top: 1px solid var(--line);
+    z-index: 200;
+    justify-content: space-around;
+    align-items: center;
+  }
+  .mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    flex: 1;
+    font-size: 10px;
+    color: var(--ink3);
+    cursor: pointer;
+    padding: 6px 4px;
+    border-top: 3px solid transparent;
+    transition: all .15s;
+  }
+  .mobile-nav-item span:first-child { font-size: 18px; }
+  .mobile-nav-item.active {
+    color: var(--accent);
+    border-top-color: var(--accent);
+  }
+  #desktop-sidebar { display: none; }
+  .main {
+    margin-left: 0 !important;
+    padding: 20px 16px 76px !important;
+    max-width: 100% !important;
+  }
+  .page-title { font-size: 20px; }
+  .input-row { flex-direction: column; align-items: stretch; }
+  .btn-primary { margin-left: 0; }
+  .stat-grid { grid-template-columns: repeat(3, 1fr); }
+  .domain-grid { grid-template-columns: repeat(2, 1fr); }
+  .theory-grid { grid-template-columns: repeat(2, 1fr); }
+  .input-card { padding: 16px; }
+  .timeline-item { padding: 14px 16px; }
+  .report-subtabs { flex-wrap: wrap; gap: 6px; }
+  .toast { bottom: 72px; }
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+<!-- ── 사이드바 (데스크탑) ── -->
+<aside class="sidebar" id="desktop-sidebar">
+  <div class="logo">
+    <div class="logo-name">유비 성장기록</div>
+    <div class="logo-sub" id="logo-age">26개월~ · 2025.10 ~</div>
+  </div>
+  <div class="nav-item active" onclick="showPage('timeline')"><span class="nav-icon">📅</span>타임라인</div>
+  <div class="nav-item" onclick="showPage('domains')"><span class="nav-icon">🔍</span>영역별</div>
+  <div class="nav-item" onclick="showPage('input')"><span class="nav-icon">✏️</span>새 기록</div>
+  <div class="nav-item" onclick="showPage('report')"><span class="nav-icon">📋</span>보고서</div>
+  <div class="nav-item" onclick="showPage('checkpoints')"><span class="nav-icon">🎯</span>관찰 포인트</div>
+  <hr class="nav-divider">
+  <div class="nav-item" onclick="showPage('settings')"><span class="nav-icon">⚙️</span>설정</div>
+
+  <div class="api-status">
+    <span class="api-dot" id="api-dot"></span>
+    <span class="api-label" id="api-label">API 미연결</span>
+    <div id="sync-status" class="sync-status"></div>
+    <div id="token-info" style="margin-top:8px;font-size:11px;color:var(--ink3);line-height:1.6;display:none">
+      <div>이번 요청: <span id="tok-this">—</span></div>
+      <div>누적 토큰: <span id="tok-total">—</span></div>
+      <div>예상 비용: <span id="tok-cost">—</span></div>
+    </div>
+  </div>
+</aside>
+
+<!-- ── 메인 ── -->
+<main class="main">
+
+<!-- 타임라인 -->
+<div class="page active" id="page-timeline">
+  <div class="page-title">타임라인</div>
+  <div class="page-sub" id="tl-sub">불러오는 중...</div>
+  <div class="tl-list" id="tl-list"></div>
+</div>
+
+<!-- 영역별 -->
+<div class="page" id="page-domains">
+  <div class="page-title">영역별 보기</div>
+  <div class="page-sub">발달 영역을 클릭하면 해당 기록만 모아볼 수 있어요.</div>
+  <div class="domain-grid" id="domain-grid"></div>
+  <div id="domain-detail"></div>
+</div>
+
+<!-- 새 기록 -->
+<div class="page" id="page-input">
+  <div class="page-title">새 기록</div>
+  <div class="page-sub">관찰한 내용을 그대로 적어주세요. 사진도 함께 올릴 수 있어요.</div>
+
+  <div class="input-card">
+    <div class="input-label">관찰 내용</div>
+    <textarea id="obs-text" placeholder="오늘 유비가 했던 말이나 행동을 그대로 적어주세요.&#10;&#10;예) 씻고 난 후 의자 가져와서 뛰어내리기 했는데 오늘 발로 착지를 잘했어. 그 뒤로 30분 더 함. 힘드니까 쉬었다 하자 하며 앉아서 잠깐 쉬고 다 쉬었다 말하고 또 함."></textarea>
+
+    <div class="img-upload-area" id="img-upload-area">
+      <input type="file" id="img-input" accept="image/*" multiple onchange="handleImgs(this)">
+      <div class="img-upload-label">📷 사진 추가 (여러 장 가능)</div>
+    </div>
+    <div class="img-preview-grid" id="img-preview"></div>
+
+    <div class="input-row">
+      <input type="date" id="obs-date">
+      <select id="obs-tag">
+        <option value="">자동 분류</option>
+        <option value="언어">언어</option>
+        <option value="자율성">자율성</option>
+        <option value="감정">감정</option>
+        <option value="인지">인지</option>
+        <option value="애착">애착</option>
+        <option value="사회성">사회성</option>
+        <option value="신체">신체</option>
+        <option value="양육">양육</option>
+      </select>
+      <button class="btn btn-primary" id="btn-analyze" onclick="doAnalyze()">AI 분석 후 저장</button>
+    </div>
+    <div class="err-msg" id="err-msg"></div>
+  </div>
+
+  <div class="preview-card" id="preview-card">
+    <div class="input-label">분석 결과 확인</div>
+    <div class="preview-header">
+      <span class="tag" id="prev-tag"></span>
+    </div>
+    <div class="preview-quote" id="prev-quote"></div>
+    <div class="preview-section-label">요약</div>
+    <div class="preview-text" id="prev-summary"></div>
+    <div class="preview-section-label">이 순간이 특별한 이유</div>
+    <div class="preview-analysis" id="prev-analysis"></div>
+    <div class="preview-imgs" id="prev-imgs"></div>
+    <div class="preview-actions">
+      <button class="btn btn-primary" onclick="doSave()">저장</button>
+      <button class="btn" onclick="cancelPreview()">다시 쓰기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 보고서 -->
+<div class="page" id="page-report">
+  <div class="page-title">보고서</div>
+  <div class="page-sub">기록이 쌓일수록 더 정확한 흐름이 보여요.</div>
+  <div class="stat-grid" id="stat-grid"></div>
+
+  <!-- 서브탭 -->
+  <div style="display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:20px">
+    <button class="report-subtab active" onclick="showReportTab('generate')" id="subtab-generate">보고서 생성</button>
+    <button class="report-subtab" onclick="showReportTab('archive')" id="subtab-archive">월별 아카이브</button>
+    <button class="report-subtab" onclick="showReportTab('flow')" id="subtab-flow">발달 흐름</button>
+    <button class="report-subtab" onclick="showReportTab('list')" id="subtab-list">전체 목록</button>
+  </div>
+
+  <!-- 보고서 생성 -->
+  <div id="rtab-generate">
+    <div class="input-card" style="margin-bottom:16px">
+      <div class="input-label" style="margin-bottom:12px">기간 & 유형 선택</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <select id="report-period" class="obs-select" style="width:120px">
+          <option value="month">이번 달</option>
+          <option value="lastmonth">지난 달</option>
+          <option value="week">이번 주</option>
+          <option value="all">전체 기간</option>
+        </select>
+        <select id="report-type" class="obs-select" style="width:160px">
+          <option value="full">종합 발달 보고서</option>
+          <option value="summary">핵심 요약</option>
+        </select>
+        <button class="btn btn-primary" onclick="genReport()">생성 & 저장</button>
+        <button class="btn" onclick="exportJSON()" style="margin-left:auto">JSON 백업</button>
+      </div>
+      <div style="font-size:11px;color:var(--ink3);margin-top:10px">생성된 보고서는 월별 아카이브에 자동 저장돼요.</div>
+    </div>
+    <div id="report-output"></div>
+  </div>
+
+  <!-- 월별 아카이브 -->
+  <div id="rtab-archive" style="display:none">
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap" id="archive-months"></div>
+    <div id="archive-content"></div>
+    <!-- 장기 흐름 -->
+    <div id="longterm-section" style="margin-top:24px;display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="input-label">장기 발달 흐름 분석</div>
+        <button class="btn btn-primary" onclick="genLongterm()">월별 요약으로 분석</button>
+      </div>
+      <div id="longterm-output"></div>
+    </div>
+  </div>
+
+  <!-- 발달 흐름 -->
+  <div id="rtab-flow" style="display:none">
+    <div class="flow-tabs" id="flow-tabs" style="margin-bottom:16px"></div>
+    <div id="flow-content"></div>
+  </div>
+
+  <!-- 전체 목록 -->
+  <div id="rtab-list" style="display:none">
+    <div class="report-list" id="report-list"></div>
+  </div>
+</div>
+
+<!-- 관찰 포인트 -->
+<div class="page" id="page-checkpoints">
+  <div class="page-title">관찰 포인트</div>
+  <div class="page-sub">다음에 봐야 할 행동들. 확인되면 체크하세요.</div>
+  <div class="cp-list" id="cp-list"></div>
+  <div class="input-row" style="margin-top:16px">
+    <input type="text" id="new-cp-text" class="settings-input" style="flex:1" placeholder="새 관찰 포인트 추가...">
+    <button class="btn" onclick="addCp()">추가</button>
+  </div>
+</div>
+
+<!-- 설정 -->
+<div class="page" id="page-settings">
+  <div class="page-title">설정</div>
+  <div class="page-sub">API Key를 입력하면 AI 분석 기능이 활성화돼요.</div>
+
+  <div class="settings-card">
+    <div class="settings-label">포인트 컬러</div>
+    <div class="settings-desc">사이드바, 버튼, 강조 라인 등에 쓰이는 색이에요. 영역별 태그 컬러는 그대로 유지돼요.</div>
+    <div class="theme-swatch-row">
+      <button class="theme-swatch" data-theme="beige" onclick="setTheme('beige')" title="베이지">
+        <span class="swatch-dot" style="background:#8B7355"></span>
+        <span class="swatch-label">베이지</span>
+      </button>
+      <button class="theme-swatch" data-theme="magenta" onclick="setTheme('magenta')" title="마젠타 핑크">
+        <span class="swatch-dot" style="background:#C2185B"></span>
+        <span class="swatch-label">마젠타</span>
+      </button>
+      <button class="theme-swatch" data-theme="charcoal" onclick="setTheme('charcoal')" title="딥 차콜">
+        <span class="swatch-dot" style="background:#2C3E50"></span>
+        <span class="swatch-label">차콜</span>
+      </button>
+      <button class="theme-swatch" data-theme="navy" onclick="setTheme('navy')" title="네이비">
+        <span class="swatch-dot" style="background:#1A3A6B"></span>
+        <span class="swatch-label">네이비</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="settings-card">
+    <div class="settings-label">Anthropic API Key</div>
+    <div class="settings-desc">
+      <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a>에서 발급받은 API Key를 입력하세요.<br>
+      Key는 이 파일 안에만 저장되고 외부로 전송되지 않아요 (API 호출 시 Anthropic 서버에만 사용).
+    </div>
+    <input type="password" id="api-key-input" class="settings-input" placeholder="sk-ant-...">
+    <div class="settings-row">
+      <button class="btn btn-primary" onclick="saveApiKey()">저장</button>
+      <button class="btn" onclick="testApiKey()">연결 테스트</button>
+      <span class="save-msg" id="api-save-msg"></span>
+    </div>
+  </div>
+
+  <div class="settings-card">
+    <div class="settings-label">데이터 관리</div>
+    <div class="settings-desc">기록은 Firebase에 실시간 저장되고 부부가 같은 데이터를 공유해요.<br>
+    인터넷 연결이 없을 때는 기기 내부에 임시 저장되고, 연결되면 자동 동기화돼요.</div>
+    <div class="settings-row">
+      <button class="btn" onclick="exportJSON()">JSON 백업</button>
+      <button class="btn" onclick="importJSON()">JSON 가져오기</button>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="handleImport(this)">
+    </div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<!-- 모바일 하단 탭바 -->
+<nav class="mobile-nav" id="mobile-nav">
+  <div class="mobile-nav-item active" onclick="showPage('timeline');setMobileNav(this)"><span>📅</span><span>타임라인</span></div>
+  <div class="mobile-nav-item" onclick="showPage('domains');setMobileNav(this)"><span>🔍</span><span>영역별</span></div>
+  <div class="mobile-nav-item" onclick="showPage('input');setMobileNav(this)"><span>✏️</span><span>새 기록</span></div>
+  <div class="mobile-nav-item" onclick="showPage('report');setMobileNav(this)"><span>📋</span><span>보고서</span></div>
+  <div class="mobile-nav-item" onclick="showPage('settings');setMobileNav(this)"><span>⚙️</span><span>설정</span></div>
+</nav>
+
+<!-- 라이트박스 -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+
+// ════════════════════════════════════════════════════════════
+// API 호출 헬퍼 — 로컬 서버 프록시 경유
+// ════════════════════════════════════════════════════════════
+async function callAnthropic(key, body) {
+  if (key !== '__server__') body._key = key;
+  const res = await fetch('/api/analyze', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  // 토큰 사용량 업데이트
+  if (data.usage) {
+    const used = (data.usage.input_tokens || 0) + (data.usage.output_tokens || 0);
+    totalTokens += used;
+    const storedTotal = parseInt(localStorage.getItem('ubi_total_tokens') || '0') + used;
+    localStorage.setItem('ubi_total_tokens', storedTotal);
+    updateTokenDisplay(used, storedTotal);
+  }
+  return { ok: res.ok, status: res.status, json: () => Promise.resolve(data) };
+}
+
+function updateTokenDisplay(thisCall, total) {
+  const info = document.getElementById('token-info');
+  if (info) info.style.display = 'block';
+  const el1 = document.getElementById('tok-this');
+  const el2 = document.getElementById('tok-total');
+  const el3 = document.getElementById('tok-cost');
+  if (el1) el1.textContent = thisCall.toLocaleString();
+  if (el2) el2.textContent = total.toLocaleString();
+  // claude-sonnet-4-6: input $3/1M, output $15/1M (roughly $3 avg)
+  if (el3) el3.textContent = '$' + (total / 1000000 * 9).toFixed(4);
+}
+
+// ════════════════════════════════════════════════════════════
+// 설정
+// ════════════════════════════════════════════════════════════
+const TODAY = new Date().toISOString().split('T')[0];
+document.getElementById('obs-date').value = TODAY;
+
+const SK_OBS = 'ubi_obs_v5';
+const SK_CP  = 'ubi_cp_v5';
+const SK_KEY = 'ubi_apikey';
+
+let observations    = [];
+let checkpoints     = [];
+let monthlyReports  = []; // [{month, type, period, obsCount, text, createdAt}]
+let apiKey          = '';
+let selDomain       = null;
+let pending         = null;
+let pendingImgs     = [];
+let totalTokens     = 0;
+
+// ════════════════════════════════════════════════════════════
+// 유비 월령 자동 계산 (생년월일: 2023-08-25)
+// ════════════════════════════════════════════════════════════
+const UBI_BIRTH = new Date('2023-08-25');
+
+function getUbiAge() {
+  const now = new Date();
+  const total = (now.getFullYear() - UBI_BIRTH.getFullYear()) * 12
+    + (now.getMonth() - UBI_BIRTH.getMonth())
+    - (now.getDate() < UBI_BIRTH.getDate() ? 1 : 0);
+  return total;
+}
+
+function getUbiAgeLabel() {
+  const m = getUbiAge();
+  const years = Math.floor(m / 12);
+  const months = m % 12;
+  if (years === 0) return m + '개월';
+  if (months === 0) return years + '세';
+  return years + '세 ' + months + '개월 (' + m + '개월)';
+}
+
+// ════════════════════════════════════════════════════════════
+// AI 프롬프트 — "성장 포착" 프레임
+// ════════════════════════════════════════════════════════════
+const SYS = `당신은 유비(여아, 현재 ${getUbiAgeLabel()})의 성장을 함께 기록하는 동반자입니다.
+
+【유비라는 아이 — 핵심 특성】
+
+1. 통제권이 핵심
+"내가 내가"의 본질은 고집이 아니라 모든 상황에서 통제권을 유지하려는 욕구. 자기가 통제할 수 있는 상태에서는 관대하고, 통제권이 위협받으면 닫힘. 도움도 "주도권은 유비, 보조만 상대"일 때만 받아들임. 위임도 하지만 결과물 이미지는 자기가 유지함.
+
+2. 받는 기쁨보다 해내는 기쁨
+선물은 수줍게 미소, 성취(세발자전거 두 손 놓기, 드라이버, 매달리기 성공)에는 "됐다!" 폭발. 성취동기(mastery motivation)가 강한 유형.
+
+3. 감수성 + 회복탄력성 공존
+외할머니 슬픔, 아빠 기침, 친구 눈물을 읽고 위로하는 감수성. 동시에 불안을 확인받으면 즉시 놀이로 전환하는 회복력. "유비 버릴 거야?" → 확인받자마자 "아빠 버려야지!"로 전환.
+
+4. 분명한 심미적 자기 기준
+옷(자기 표현): 파랑/분홍/보라, 검정 거부. 도구 영역(카시트, 신발): 검정 선택. 네일: 빨강. 야생화: 쿨톤 블루/화이트만 수집. 색을 하나 고르라 하면 "다 좋아해" — 규정 자체를 거부.
+
+5. 자기 완결 구조
+한 사이클 끝났을 때와 외부에서 끊길 때를 구분하고 반응이 다름. 스스로 정한 횟수 채우면 "이제 멈춰줘"를 먼저 말함. 외부에서 일방적으로 끊으면 저항.
+
+【발달 현재 위치 (${getUbiAgeLabel()})】
+- 가상놀이 3단계: 도구 없이 동작만으로 시뮬레이션 (청진기 시늉, 안전벨트 시늉)
+- 비례 추론: "버스는 크니까 이만큼, 택시는 작으니까 이만큼"
+- 귀납적 추론: 엄마 금니 → 할머니도 이빨 안 닦았어?
+- 협상 구조: 자기 정체성 유지 + 안전망 수용 (기저귀 합의 등)
+- 인물화: 머리/몸통 분리, 이목구비 배치, 여러 캐릭터 관계적 배치
+- 공간별 규칙 구분: 납득되는 규칙은 지키고, 납득 안 되면 거부
+- 어린이집 안착: 친구 먼저 달래주기, 배변 자율성 확보
+- 언어: 은유(달님이 불 켜줘서 좋아) → 비례 표현으로 진화
+- 시간 개념: 과거 누적("배 두 개 탔지?") + 미래 예고("나중 유비를 차갑게 할 거야")
+
+【비동기적 발달 이해】
+인지 일부 영역(언어 표현, 상황 파악)은 빠르게 발달 중이지만, 감정 조절은 ${getUbiAge()}개월 그대로. 말이 통한다고 감정까지 다스릴 수 있다고 기대하면 안 됨. 떼쓰기, 가짜 울음, 짜증은 퇴행이 아니라 월령에 맞는 정상.
+
+【분석 시 반드시 지킬 것】
+- "빠르다"고 단정하지 말 것. 발달이 빠르게 보이는 데에는 양육 환경 기여도가 큼
+- "또래 상위 X%", "X세 수준", "영재", "비범" 같은 단정 금지
+- 모든 행동에 최고급 칭찬을 붙이지 말 것. 한 번의 관찰로 패턴 단정 금지
+- 라벨 주의: "통제적인 아이", "착한 아이", "똑똑한 아이" 같은 라벨보다 그 순간 유비가 한 것을 구체적으로 묘사
+- 유비 특성에 비추어 해석할 것. 일반적인 발달 단계 설명보다 유비답게
+
+반드시 아래 JSON 형식으로만 응답하세요. 마크다운 없이 순수 JSON만:
+{
+  "tag": "언어|자율성|감정|인지|애착|사회성|신체|양육|기타 중 가장 잘 맞는 하나",
+  "quote": "이 관찰에서 가장 인상적인 발화나 행동을 20자 이내로. 없으면 빈 문자열",
+  "summary": "무슨 일이 있었는지 2문장으로 담백하게. 과장 없이 사실 위주로",
+  "analysis": "이 순간 유비가 어떻게 작동하고 있는지 2-3문장으로. 유비의 기존 패턴과 연결하거나, 이전과 달라진 점을 구체적으로. 과잉 칭찬 없이 관찰 기반으로"
+}`;
+
+// ════════════════════════════════════════════════════════════
+// Firebase 설정
+// ════════════════════════════════════════════════════════════
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCTI2lkYnoriADckJ62tdHtJJgO-OBB4YM",
+  authDomain: "ubitracker-d763b.firebaseapp.com",
+  projectId: "ubitracker-d763b",
+  storageBucket: "ubitracker-d763b.firebasestorage.app",
+  messagingSenderId: "518119132541",
+  appId: "1:518119132541:web:e3eeebc4ba594a6024d014"
+};
+
+let db = null;
+
+async function initFirebase() {
+  try {
+    const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
+    const { getFirestore, doc, setDoc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    const app = initializeApp(FIREBASE_CONFIG);
+    db = getFirestore(app);
+    window._fbDoc = doc(db, 'ubi', 'main');
+    window._fbSetDoc = setDoc;
+    window._fbGetDoc = getDoc;
+    console.log('Firebase 연결 성공');
+    return true;
+  } catch(e) {
+    console.log('Firebase 연결 실패:', e.message);
+    return false;
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// 저장소
+// ════════════════════════════════════════════════════════════
+async function loadData() {
+  const fbOk = await initFirebase();
+
+  if (fbOk) {
+    try {
+      const snap = await window._fbGetDoc(window._fbDoc);
+      if (snap.exists()) {
+        const d = snap.data();
+        observations   = (d.observations   && d.observations.length)   ? d.observations   : getDefaultObs();
+        checkpoints    = (d.checkpoints    && d.checkpoints.length)    ? d.checkpoints    : getDefaultCp();
+        monthlyReports = (d.monthlyReports && d.monthlyReports.length) ? d.monthlyReports : getDefaultMonthlyReports();
+        // API Key
+        if (d.apiKey) {
+          apiKey = d.apiKey;
+          document.getElementById('api-key-input').value = '(저장됨)';
+        }
+        showSyncStatus('✓ 동기화됨');
+      } else {
+        observations   = getDefaultObs();
+        checkpoints    = getDefaultCp();
+        monthlyReports = getDefaultMonthlyReports();
+        await saveData();
+      }
+    } catch(e) {
+      console.log('Firebase 로드 실패, localStorage 폴백:', e.message);
+      loadFromLocal();
+    }
+  } else {
+    loadFromLocal();
+  }
+
+  updateApiStatus();
+  const savedTokens = parseInt(localStorage.getItem('ubi_total_tokens') || '0');
+  if (savedTokens > 0) {
+    totalTokens = savedTokens;
+    updateTokenDisplay(0, savedTokens);
+    document.getElementById('tok-this').textContent = '—';
+  }
+  renderAll();
+}
+
+function loadFromLocal() {
+  try {
+    const raw = localStorage.getItem('ubi_data');
+    if (raw) {
+      const d = JSON.parse(raw);
+      observations   = d.observations   || getDefaultObs();
+      checkpoints    = d.checkpoints    || getDefaultCp();
+      monthlyReports = d.monthlyReports || getDefaultMonthlyReports();
+    } else {
+      observations   = getDefaultObs();
+      checkpoints    = getDefaultCp();
+      monthlyReports = getDefaultMonthlyReports();
+    }
+  } catch(e) {
+    observations   = getDefaultObs();
+    checkpoints    = getDefaultCp();
+    monthlyReports = getDefaultMonthlyReports();
+  }
+}
+
+async function saveData() {
+  const payload = { observations, checkpoints, monthlyReports, savedAt: new Date().toISOString() };
+  if (apiKey && apiKey !== '__server__') payload.apiKey = apiKey;
+
+  // Firebase 저장
+  if (window._fbDoc && window._fbSetDoc) {
+    try {
+      await window._fbSetDoc(window._fbDoc, payload);
+      showSyncStatus('✓ 저장됨');
+    } catch(e) {
+      console.log('Firebase 저장 실패:', e.message);
+      showSyncStatus('⚠ 저장 실패');
+    }
+  }
+  // localStorage 백업
+  try { localStorage.setItem('ubi_data', JSON.stringify(payload)); } catch(e) {}
+}
+
+function showSyncStatus(msg) {
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+  el.textContent = msg;
+  setTimeout(() => { el.textContent = ''; }, 3000);
+}
+
+function saveObs() { saveData(); }
+function saveCp()  { saveData(); }
+async function saveKey(key) {
+  apiKey = key;
+  await saveData();
+}
+
+// ════════════════════════════════════════════════════════════
+// 네비게이션
+// ════════════════════════════════════════════════════════════
+const PAGES = ['timeline','domains','input','report','checkpoints','settings'];
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  const idx = PAGES.indexOf(name);
+  document.querySelectorAll('.nav-item')[idx]?.classList.add('active');
+  if (name === 'timeline')    renderTimeline();
+  if (name === 'domains')     renderDomains();
+  if (name === 'report')      renderReport();
+  if (name === 'checkpoints') renderCheckpoints();
+}
+
+function renderAll() {
+  renderTimeline();
+  renderDomains();
+  renderReport();
+  renderCheckpoints();
+}
+
+// ════════════════════════════════════════════════════════════
+// 유틸
+// ════════════════════════════════════════════════════════════
+function tc(tag) { return 'tag ' + ('tag-' + (tag || '기타')); }
+function fd(d) {
+  if (!d) return '';
+  const dt = new Date(d + 'T12:00:00');
+  return `${dt.getMonth()+1}/${dt.getDate()}`;
+}
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+function setErr(msg) { document.getElementById('err-msg').textContent = msg || ''; }
+
+function updateApiStatus() {
+  const dot = document.getElementById('api-dot');
+  const lbl = document.getElementById('api-label');
+  if (apiKey === '__server__' || (apiKey && apiKey.startsWith('sk-ant'))) {
+    dot.className = 'api-dot ok';
+    lbl.textContent = 'AI 연결됨';
+  } else {
+    dot.className = 'api-dot err';
+    lbl.textContent = 'API 미연결';
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// 타임라인
+// ════════════════════════════════════════════════════════════
+function renderTimeline() {
+  const sorted = [...observations].sort((a, b) => b.date.localeCompare(a.date));
+  const sub = document.getElementById('tl-sub');
+  const list = document.getElementById('tl-list');
+  sub.textContent = `총 ${sorted.length}개의 성장 기록`;
+  if (!sorted.length) { list.innerHTML = '<div class="empty">아직 기록이 없어요</div>'; return; }
+  const TAGS = ['언어','자율성','감정','인지','애착','사회성','신체','양육','기타'];
+  list.innerHTML = sorted.map((o, i) => `
+    <div class="tl-item">
+      <div class="tl-date-col">${fd(o.date)}</div>
+      <div class="tl-spine">
+        <div class="tl-dot"></div>
+        ${i < sorted.length - 1 ? '<div class="tl-spine-line"></div>' : ''}
+      </div>
+      <div class="tl-card" data-id="${o.id}" onclick="toggleTlCard(event, this)">
+        <div class="tl-card-header">
+          <span class="${tc(o.tag)}">${o.tag || '기타'}</span>
+          <div class="tl-card-actions">
+            <button class="tl-edit-btn" onclick="event.stopPropagation();startEditObs(${o.id})">수정</button>
+            <button class="tl-edit-btn danger" onclick="event.stopPropagation();deleteObs(${o.id})">삭제</button>
+          </div>
+        </div>
+        <div class="tl-edit-zone" id="edit-zone-${o.id}" style="display:none">
+          <div class="tl-edit-form">
+            <input type="date" id="edit-date-${o.id}" value="${o.date}">
+            <select id="edit-tag-${o.id}">
+              ${TAGS.map(t => `<option value="${t}"${(o.tag||'기타')===t?' selected':''}>${t}</option>`).join('')}
+            </select>
+            <button class="btn btn-primary" onclick="event.stopPropagation();saveEditObs(${o.id})">저장</button>
+            <button class="btn" onclick="event.stopPropagation();cancelEditObs(${o.id})">취소</button>
+          </div>
+        </div>
+        ${o.quote ? `<div class="tl-card-quote">"${o.quote}"</div>` : ''}
+        <div class="tl-card-summary">${o.summary || ''}</div>
+        ${o.images && o.images.length ? `
+          <div class="tl-card-imgs">
+            ${o.images.map(img => `<img src="${img}" alt="" onclick="event.stopPropagation();openLightbox(this.src)">`).join('')}
+          </div>` : ''}
+        ${o.analysis ? `
+          <div class="tl-card-analysis">${o.analysis}</div>
+          <div class="tl-hint">▸ 이 순간이 특별한 이유</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleTlCard(ev, el) {
+  // 편집 영역이 열려있으면 토글 안 함
+  const zone = el.querySelector('.tl-edit-zone');
+  if (zone && zone.style.display === 'block') return;
+  el.classList.toggle('expanded');
+  const h = el.querySelector('.tl-hint');
+  if (h) h.textContent = el.classList.contains('expanded') ? '▾ 접기' : '▸ 이 순간이 특별한 이유';
+}
+
+function startEditObs(id) {
+  const zone = document.getElementById('edit-zone-' + id);
+  if (zone) zone.style.display = 'block';
+}
+
+function cancelEditObs(id) {
+  const zone = document.getElementById('edit-zone-' + id);
+  if (zone) zone.style.display = 'none';
+  // 입력값 원복
+  const obs = observations.find(o => o.id === id);
+  if (obs) {
+    const dEl = document.getElementById('edit-date-' + id);
+    const tEl = document.getElementById('edit-tag-' + id);
+    if (dEl) dEl.value = obs.date;
+    if (tEl) tEl.value = obs.tag || '기타';
+  }
+}
+
+async function saveEditObs(id) {
+  const obs = observations.find(o => o.id === id);
+  if (!obs) return;
+  const newDate = document.getElementById('edit-date-' + id).value;
+  const newTag  = document.getElementById('edit-tag-' + id).value;
+  if (!newDate) { toast('날짜를 입력해주세요'); return; }
+  obs.date = newDate;
+  obs.tag = newTag;
+  await saveData();
+  toast('수정됐어요 ✓');
+  renderAll();
+}
+
+async function deleteObs(id) {
+  if (!confirm('이 기록을 삭제할까요? 되돌릴 수 없어요.')) return;
+  const idx = observations.findIndex(o => o.id === id);
+  if (idx < 0) return;
+  observations.splice(idx, 1);
+  await saveData();
+  toast('삭제됐어요');
+  renderAll();
+}
+
+// ════════════════════════════════════════════════════════════
+// 영역별
+// ════════════════════════════════════════════════════════════
+const DC = { 언어:'#3B6D11', 자율성:'#185FA5', 감정:'#854F0B', 인지:'#3C3489', 애착:'#993C1D', 사회성:'#993356', 신체:'#274d0a', 양육:'#444441', 기타:'#5A564F' };
+
+function renderDomains() {
+  const tags = ['언어','자율성','감정','인지','애착','사회성','신체','양육','기타'];
+  const cnt = {}; tags.forEach(t => cnt[t] = 0);
+  observations.forEach(o => { const t = o.tag || '기타'; cnt[t] = (cnt[t]||0) + 1; });
+  const max = Math.max(...Object.values(cnt), 1);
+  document.getElementById('domain-grid').innerHTML = tags.filter(t => cnt[t] > 0).map(t => `
+    <div class="domain-card${selDomain === t ? ' sel' : ''}" onclick="selDom('${t}')">
+      <div class="domain-card-name" style="color:${DC[t]}">${t}</div>
+      <div class="domain-card-count">${cnt[t]}개</div>
+      <div class="domain-bar"><div class="domain-bar-fill" style="width:${Math.round(cnt[t]/max*100)}%;background:${DC[t]}"></div></div>
+    </div>
+  `).join('');
+  if (selDomain) renderDomainDetail(selDomain);
+  else document.getElementById('domain-detail').innerHTML = '';
+}
+
+function selDom(tag) {
+  selDomain = selDomain === tag ? null : tag;
+  renderDomains();
+}
+
+function renderDomainDetail(tag) {
+  const obs = observations.filter(o => (o.tag || '기타') === tag).sort((a, b) => a.date.localeCompare(b.date));
+  document.getElementById('domain-detail').innerHTML = `
+    <div style="font-size:11px;font-weight:500;color:var(--ink3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px">${tag} — ${obs.length}개</div>
+    <div class="domain-entries">${obs.map(o => `
+      <div class="domain-entry">
+        <div class="domain-entry-date">${o.date}</div>
+        ${o.quote ? `<div class="domain-entry-quote">"${o.quote}"</div>` : ''}
+        <div style="font-size:13px;line-height:1.6;color:var(--ink2)">${o.summary || ''}</div>
+        ${o.analysis ? `<div class="domain-entry-analysis">${o.analysis}</div>` : ''}
+        ${o.images && o.images.length ? `<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">${o.images.map(img => `<img src="${img}" style="height:56px;border-radius:6px;object-fit:cover;border:1px solid var(--line);cursor:pointer" onclick="openLightbox('${img}')">`).join('')}</div>` : ''}
+      </div>
+    `).join('')}</div>`;
+}
+
+// ════════════════════════════════════════════════════════════
+// 이미지
+// ════════════════════════════════════════════════════════════
+function handleImgs(input) {
+  const files = Array.from(input.files);
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      pendingImgs.push({ dataUrl: e.target.result, mimeType: file.type });
+      renderImgPreview();
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function renderImgPreview() {
+  document.getElementById('img-preview').innerHTML = pendingImgs.map((img, i) => `
+    <div class="img-thumb">
+      <img src="${img.dataUrl}" alt="">
+      <button class="img-thumb-del" onclick="removeImg(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+function removeImg(i) {
+  pendingImgs.splice(i, 1);
+  renderImgPreview();
+}
+
+function openLightbox(src) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.add('show');
+}
+function closeLightbox() { document.getElementById('lightbox').classList.remove('show'); }
+
+// ════════════════════════════════════════════════════════════
+// AI 분석
+// ════════════════════════════════════════════════════════════
+async function doAnalyze() {
+  const text = document.getElementById('obs-text').value.trim();
+  if (!text) { setErr('내용을 입력해주세요.'); return; }
+  if (!apiKey) {
+    setErr('설정에서 API Key를 먼저 입력해주세요.');
+    return;
+  }
+  const btn = document.getElementById('btn-analyze');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>분석 중...';
+  setErr('');
+  document.getElementById('preview-card').classList.remove('show');
+
+  const date = document.getElementById('obs-date').value || TODAY;
+  const manualTag = document.getElementById('obs-tag').value;
+
+  // 메시지 구성 (텍스트 + 이미지)
+  const userContent = [];
+  if (pendingImgs.length) {
+    pendingImgs.forEach(img => {
+      userContent.push({
+        type: 'image',
+        source: { type: 'base64', media_type: img.mimeType, data: img.dataUrl.split(',')[1] }
+      });
+    });
+  }
+  userContent.push({ type: 'text', text: `날짜: ${date}\n\n관찰 내용:\n${text}` });
+
+  try {
+    const res = await callAnthropic(apiKey, {
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        system: SYS,
+        messages: [{ role: 'user', content: userContent }]
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    const raw = data.content?.[0]?.text || '';
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+
+    const finalTag = manualTag || parsed.tag || '기타';
+    pending = {
+      id: Date.now(),
+      date,
+      tag: finalTag,
+      quote: parsed.quote || '',
+      summary: parsed.summary || text,
+      analysis: parsed.analysis || '',
+      images: pendingImgs.map(i => i.dataUrl)
+    };
+
+    // 미리보기
+    document.getElementById('prev-tag').className = tc(finalTag);
+    document.getElementById('prev-tag').textContent = finalTag;
+    const pq = document.getElementById('prev-quote');
+    pq.textContent = parsed.quote ? `"${parsed.quote}"` : '';
+    pq.style.display = parsed.quote ? 'block' : 'none';
+    document.getElementById('prev-summary').textContent = parsed.summary || '';
+    document.getElementById('prev-analysis').textContent = parsed.analysis || '';
+    document.getElementById('prev-imgs').innerHTML = pending.images.map(img =>
+      `<img src="${img}" style="height:80px;border-radius:6px;object-fit:cover;border:1px solid var(--line)">`
+    ).join('');
+    document.getElementById('preview-card').classList.add('show');
+
+  } catch(e) {
+    setErr('오류: ' + e.message);
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = 'AI 분석 후 저장';
+}
+
+async function doSave() {
+  if (!pending) return;
+  observations.push(pending);
+  await saveData();
+  pending = null;
+  pendingImgs = [];
+  document.getElementById('obs-text').value = '';
+  document.getElementById('obs-tag').value = '';
+  document.getElementById('img-preview').innerHTML = '';
+  document.getElementById('preview-card').classList.remove('show');
+  setErr('');
+  toast('저장됐어요 ✓');
+  renderAll();
+}
+
+function cancelPreview() {
+  pending = null;
+  document.getElementById('preview-card').classList.remove('show');
+}
+
+// ════════════════════════════════════════════════════════════
+// 보고서
+// ════════════════════════════════════════════════════════════
+function renderReport() {
+  const obs = observations;
+  const dates = obs.map(o => o.date).sort();
+  let period = '—';
+  if (dates.length >= 2) {
+    const m = Math.round((new Date(dates[dates.length-1]+'T12:00:00') - new Date(dates[0]+'T12:00:00')) / 86400000 / 30);
+    period = m > 0 ? `${m}개월` : dates[0];
+  }
+  const withImgs = obs.filter(o => o.images && o.images.length).length;
+  document.getElementById('stat-grid').innerHTML = `
+    <div class="stat-card"><div class="stat-label">총 기록</div><div class="stat-val">${obs.length}</div></div>
+    <div class="stat-card"><div class="stat-label">관찰 기간</div><div class="stat-val" style="font-size:16px;padding-top:6px">${period}</div></div>
+    <div class="stat-card"><div class="stat-label">사진 포함</div><div class="stat-val">${withImgs}</div></div>
+  `;
+  renderFlowTabs();
+}
+
+async function genReport() {
+  if (!apiKey) { alert('설정에서 API Key를 먼저 입력해주세요.'); return; }
+
+  const period  = document.getElementById('report-period').value;
+  const type    = document.getElementById('report-type').value;
+  const out     = document.getElementById('report-output');
+  out.innerHTML = '<div style="padding:20px 0;font-size:13px;color:var(--ink3)"><span class="spin spin-dark"></span> 생성 중...</div>';
+
+  // 기간 필터
+  const now   = new Date();
+  const y     = now.getFullYear();
+  const m     = now.getMonth();
+  let filtered = [...observations].sort((a,b) => a.date.localeCompare(b.date));
+
+  if (period === 'month') {
+    const from = `${y}-${String(m+1).padStart(2,'0')}-01`;
+    filtered = filtered.filter(o => o.date >= from);
+  } else if (period === 'lastmonth') {
+    const lm   = m === 0 ? 12 : m;
+    const ly   = m === 0 ? y-1 : y;
+    const from = `${ly}-${String(lm).padStart(2,'0')}-01`;
+    const to   = `${y}-${String(m+1).padStart(2,'0')}-01`;
+    filtered = filtered.filter(o => o.date >= from && o.date < to);
+  } else if (period === 'week') {
+    const d = new Date(); d.setDate(d.getDate()-7);
+    const from = d.toISOString().split('T')[0];
+    filtered = filtered.filter(o => o.date >= from);
+  }
+
+  if (!filtered.length) {
+    out.innerHTML = '<div class="err-msg">해당 기간에 기록이 없어요.</div>'; return;
+  }
+
+  const periodLabel = { all:'전체 기간', month:'이번 달', lastmonth:'지난 달', week:'이번 주' }[period];
+  const obsText = filtered.map(o =>
+    `[${o.date}][${o.tag}] ${o.quote ? '"'+o.quote+'" ' : ''}${o.summary}${o.analysis ? ' → '+o.analysis : ''}`
+  ).join('\n');
+
+  const STRUCTURE = `
+보고서 구조를 반드시 아래 순서로 작성해주세요:
+
+# 유비 성장 보고서 — {기간}
+
+## 관찰 개요
+기간, 총 기록 수, 주요 관찰 영역을 한두 문장으로 담백하게 정리.
+
+## 영역별 분석
+관찰 기록이 있는 영역만, 아래 형식으로:
+### [영역명]
+이번 기간 구체적인 에피소드를 포함해 서술. 유비의 기존 패턴과 연결하거나 이전과 달라진 점 중심으로. "비범", "놀라운", "교과서적" 같은 과장 표현 사용하지 않기. 있는 그대로 묘사.
+
+## 이번 기간 가장 인상적인 장면
+기록 중 가장 유비다웠던 장면 2-3개. 왜 특별한지가 아니라, 그 순간 유비가 어떻게 작동하고 있었는지를 설명.
+
+## 총평
+이번 기간 변화를 관통하는 흐름 3-4문장. "~세 수준", "상위 X%", "영재" 같은 단정 금지. 유비의 본질적 특성이 어떻게 이번 기간에 나타났는지 중심으로.
+
+## 양육 포인트
+이번 기록에서 부모가 잘 하고 있는 것 1-2가지 + 앞으로 살펴볼 것 2-3가지. 과제나 숙제 느낌 아닌 자연스러운 관찰 방향으로.`;
+
+  const prompts = {
+    full: `아래는 유비(여아)의 성장 관찰 기록입니다. 기간: ${periodLabel}\n\n${obsText}\n\n${STRUCTURE}\n\n문체는 따뜻하고 구체적으로. 발달 문제 감지가 아니라 이 아이가 세상을 어떻게 자라고 있는지를 포착하는 시선으로 써주세요.`,
+    summary: `아래는 유비(여아)의 성장 관찰 기록입니다. 기간: ${periodLabel}\n\n${obsText}\n\n핵심만 담은 짧은 요약을 써주세요:\n- 이번 기간 가장 눈에 띈 변화 2-3가지\n- 유비다운 순간 하나\n- 한 줄 총평\n\n전체 500자 이내로.`
+  };
+
+  try {
+    const res  = await callAnthropic(apiKey, {
+      model: 'claude-sonnet-4-6',
+      max_tokens: 4096,
+      system: SYS,
+      messages: [{ role: 'user', content: prompts[type] }]
+    });
+    const data = await res.json();
+    const text = data.content?.[0]?.text || '';
+    const safeText = text.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    out.innerHTML = `<div class="report-box">${safeText}</div>`;
+
+    // 아카이브에 저장
+    const now = new Date();
+    const monthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    monthlyReports.push({
+      id: Date.now(),
+      month: monthKey,
+      period: periodLabel,
+      type,
+      obsCount: filtered.length,
+      text,
+      createdAt: now.toISOString()
+    });
+    await saveData();
+    toast('보고서가 아카이브에 저장됐어요 ✓');
+  } catch(e) {
+    out.innerHTML = `<div class="err-msg">오류: ${e.message}</div>`;
+  }
+}
+
+// ── 보고서 서브탭 ────────────────────────────────────────
+function showReportTab(name) {
+  ['generate','archive','flow','list'].forEach(t => {
+    document.getElementById('rtab-'+t).style.display = t===name ? 'block' : 'none';
+    document.getElementById('subtab-'+t).classList.toggle('active', t===name);
+  });
+  if (name==='archive') renderArchive();
+  if (name==='flow')    renderFlowTabs();
+  if (name==='list')    renderReportList();
+}
+
+// ── 월별 아카이브 ─────────────────────────────────────────
+let activeArchiveMonth = null;
+
+function renderArchive() {
+  const months = [...new Set(monthlyReports.map(r => r.month))].sort().reverse();
+  const monthsEl = document.getElementById('archive-months');
+  const contentEl = document.getElementById('archive-content');
+  const longtermEl = document.getElementById('longterm-section');
+
+  if (!months.length) {
+    monthsEl.innerHTML = '';
+    contentEl.innerHTML = '<div style="font-size:13px;color:var(--ink3);padding:12px 0">아직 저장된 보고서가 없어요.<br>보고서 생성 탭에서 먼저 만들어보세요.</div>';
+    longtermEl.style.display = 'none';
+    return;
+  }
+
+  if (!activeArchiveMonth || !months.includes(activeArchiveMonth)) {
+    activeArchiveMonth = months[0];
+  }
+
+  monthsEl.innerHTML = months.map(m => `
+    <button class="archive-month-btn${activeArchiveMonth===m?' active':''}" onclick="selectArchiveMonth('${m}')">${m}</button>
+  `).join('');
+
+  renderArchiveContent();
+  longtermEl.style.display = months.length >= 2 ? 'block' : 'none';
+}
+
+function selectArchiveMonth(m) {
+  activeArchiveMonth = m;
+  document.querySelectorAll('.archive-month-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent === m);
+  });
+  renderArchiveContent();
+}
+
+function renderArchiveContent() {
+  const reports = monthlyReports
+    .filter(r => r.month === activeArchiveMonth)
+    .sort((a,b) => b.createdAt.localeCompare(a.createdAt));
+  const el = document.getElementById('archive-content');
+  if (!reports.length) { el.innerHTML = '<div style="font-size:13px;color:var(--ink3)">이 달 보고서가 없어요.</div>'; return; }
+  el.innerHTML = reports.map(r => `
+    <div class="archive-card">
+      <div class="archive-card-header">
+        <div>
+          <div class="archive-card-month">${r.month} · ${r.period} · ${{full:'종합',summary:'핵심요약'}[r.type]||r.type}</div>
+          <div class="archive-card-meta">${r.obsCount}개 기록 기반 · ${r.createdAt.slice(0,10)} 생성</div>
+        </div>
+        <button class="btn" onclick="toggleArchiveCard(this)" style="font-size:11px;padding:4px 10px">펼치기</button>
+      </div>
+      <div class="archive-card-body">${(r.text||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+    </div>
+  `).join('');
+}
+
+function toggleArchiveCard(btn) {
+  const body = btn.closest('.archive-card').querySelector('.archive-card-body');
+  body.classList.toggle('expanded');
+  btn.textContent = body.classList.contains('expanded') ? '접기' : '펼치기';
+}
+
+async function genLongterm() {
+  if (!apiKey) { alert('API Key를 먼저 입력해주세요.'); return; }
+  const el = document.getElementById('longterm-output');
+  el.innerHTML = '<div style="padding:16px 0;font-size:13px;color:var(--ink3)"><span class="spin spin-dark"></span> 분석 중...</div>';
+
+  const summaries = [...monthlyReports]
+    .sort((a,b) => a.month.localeCompare(b.month))
+    .map(r => '[' + r.month + '] ' + r.period + ' (' + r.obsCount + '개 기록)\n' + r.text.slice(0,800))
+    .join('\n\n---\n\n');
+
+  const prompt = `아래는 유비의 월별 성장 보고서 요약들입니다.
+
+${summaries}
+
+이 흐름을 바탕으로:
+1. 시간에 따라 가장 뚜렷하게 성장한 영역
+2. 유비만의 일관된 특성 (여러 달에 걸쳐 반복되는 패턴)
+3. 최근 새롭게 나타난 변화
+4. 앞으로 기대되는 모습
+
+을 따뜻하고 구체적으로 정리해주세요.`;
+
+  try {
+    const res = await callAnthropic(apiKey, {
+      model: 'claude-sonnet-4-6',
+      max_tokens: 2000,
+      system: SYS,
+      messages: [{ role: 'user', content: prompt }]
+    });
+    const data = await res.json();
+    const text = (data.content?.[0]?.text||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    el.innerHTML = `<div class="report-box">${text}</div>`;
+  } catch(e) {
+    el.innerHTML = `<div class="err-msg">오류: ${e.message}</div>`;
+  }
+}
+
+function renderReportList() {
+  const sorted = [...observations].sort((a,b) => b.date.localeCompare(a.date));
+  document.getElementById('report-list').innerHTML = sorted.map(o => `
+    <div class="report-row">
+      <span class="report-row-date">${fd(o.date)}</span>
+      <span class="${tc(o.tag)}">${o.tag||'기타'}</span>
+      <span style="color:var(--ink2)">${(o.quote||o.summary||'').substring(0,50)}${(o.quote||o.summary||'').length>50?'…':''}</span>
+      ${o.images&&o.images.length?`<span style="font-size:11px;color:var(--ink3);margin-left:auto">📷${o.images.length}</span>`:''}
+    </div>
+  `).join('');
+}
+
+// ── 발달 흐름 ─────────────────────────────────────────────
+const FLOW_TAGS = ['언어','자율성','감정','인지','애착','사회성','신체','양육'];
+let activeFlowTag = '언어';
+
+function renderFlowTabs() {
+  const tabs = document.getElementById('flow-tabs');
+  if (!tabs) return;
+  tabs.innerHTML = FLOW_TAGS.map(t => `
+    <button class="flow-tab${activeFlowTag===t?' active':''}" onclick="selectFlowTab('${t}')">${t}</button>
+  `).join('');
+  renderFlowContent();
+}
+
+function selectFlowTab(tag) {
+  activeFlowTag = tag;
+  document.querySelectorAll('.flow-tab').forEach(t => {
+    t.classList.toggle('active', t.textContent === tag);
+  });
+  renderFlowContent();
+}
+
+function renderFlowContent() {
+  const el = document.getElementById('flow-content');
+  if (!el) return;
+  const obs = observations
+    .filter(o => (o.tag||'기타') === activeFlowTag)
+    .sort((a,b) => a.date.localeCompare(b.date));
+  if (!obs.length) {
+    el.innerHTML = '<div style="font-size:13px;color:var(--ink3);padding:12px 0">이 영역의 기록이 없어요.</div>';
+    return;
+  }
+  el.innerHTML = obs.map(o => `
+    <div class="flow-item">
+      <div class="flow-item-date">${o.date.slice(5)}</div>
+      <div class="flow-item-content">
+        ${o.quote ? `<div class="flow-item-quote">"${o.quote}"</div>` : ''}
+        <div class="flow-item-analysis">${o.analysis || o.summary || ''}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ════════════════════════════════════════════════════════════
+// 관찰 포인트
+// ════════════════════════════════════════════════════════════
+function renderCheckpoints() {
+  document.getElementById('cp-list').innerHTML = checkpoints.map(cp => `
+    <div class="cp-item${cp.done?' done':''}">
+      <div class="cp-dot" onclick="toggleCp(${cp.id})">${cp.done?'✓':''}</div>
+      <div>
+        <div class="cp-text">${cp.text}</div>
+        ${cp.sub ? `<div class="cp-sub">${cp.sub}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+async function toggleCp(id) {
+  const cp = checkpoints.find(c => c.id === id);
+  if (cp) { cp.done = !cp.done; await saveData(); renderCheckpoints(); }
+}
+
+async function addCp() {
+  const el = document.getElementById('new-cp-text');
+  const text = el?.value.trim();
+  if (!text) return;
+  checkpoints.push({ id: Date.now(), text, sub: '', done: false });
+  await saveData();
+  el.value = '';
+  renderCheckpoints();
+  toast('추가됐어요 ✓');
+}
+
+// ════════════════════════════════════════════════════════════
+// 설정
+// ════════════════════════════════════════════════════════════
+async function saveApiKey() {
+  const key = document.getElementById('api-key-input').value.trim();
+  if (!key || key === '(저장됨)') return;
+  apiKey = key;
+  await saveData();
+  updateApiStatus();
+  document.getElementById('api-key-input').value = '(저장됨)';
+  document.getElementById('api-save-msg').textContent = '저장됐어요 ✓';
+  setTimeout(() => document.getElementById('api-save-msg').textContent = '', 2000);
+}
+
+async function testApiKey() {
+  const key = document.getElementById('api-key-input').value.trim();
+  const testKey = (key && key !== '(서버에 저장됨)') ? key : '__server__';
+  try {
+    const res = await callAnthropic(testKey, {
+      model: 'claude-sonnet-4-6',
+      max_tokens: 10,
+      messages: [{ role: 'user', content: 'hi' }]
+    });
+    if (res.ok) {
+      alert('✅ 연결 성공!');
+      if (testKey !== '__server__') await saveKey(testKey);
+      updateApiStatus();
+    } else {
+      const e = await res.json();
+      alert('❌ 오류: ' + (e.error?.message || res.status));
+    }
+  } catch(e) { alert('❌ 연결 실패: ' + e.message); }
+}
+
+// ════════════════════════════════════════════════════════════
+// JSON 내보내기 / 가져오기
+// ════════════════════════════════════════════════════════════
+function exportJSON() {
+  const data = JSON.stringify({ observations, checkpoints, exportedAt: new Date().toISOString() }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `ubi_data_${TODAY}.json`;
+  a.click();
+  toast('내보내기 완료 ✓');
+}
+
+function importJSON() { document.getElementById('import-file').click(); }
+
+async function handleImport(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const text = await file.text();
+  try {
+    const data = JSON.parse(text);
+    if (data.observations) observations = data.observations;
+    if (data.checkpoints)  checkpoints  = data.checkpoints;
+    await saveData();
+    renderAll();
+    toast('가져오기 완료 ✓');
+  } catch(e) { alert('파일 형식이 올바르지 않아요.'); }
+}
+
+// ════════════════════════════════════════════════════════════
+// 기본 데이터
+// ════════════════════════════════════════════════════════════
+function getDefaultObs() {
+  return [
+    {id:1,date:'2025-10-01',tag:'언어',quote:'달님이 유비 눈물 닦아줬어',summary:'하원길 차 안에서 배 아파 울다가 갓길에 세우고 안아준 뒤 다시 탔는데, 달을 보고 한 말.',analysis:'감정 상태를 자연물에 투영해 표현. 아픔이 달래진 경험을 달님이 해준 것으로 연결한 첫 은유적 발화.',images:[]},
+    {id:2,date:'2025-10-05',tag:'자율성',quote:'내가 내가',summary:'26개월. 아빠가 뭔가를 꺼내면 다시 집어넣고 처음부터 자기가 해야 함. 두 달째 지속.',analysis:'과정의 시작점을 자기가 통제해야 만족하는 패턴. 결과보다 누가 시작했느냐가 기준.',images:[]},
+    {id:3,date:'2025-10-08',tag:'사회성',quote:'아빠 기침해? 내가 안아줄게',summary:'아빠 아프면 안아주겠다고 함. 어린이집 친구들 이야기를 집에서 해줌. 친구 한 명 이름만 하다가 다른 친구들 이야기도 시작.',analysis:'타인의 신체 상태를 감지하고 위로 행동으로 연결. 어린이집 일상을 집에서 공유하는 기억력과 사회적 공유 욕구.',images:[]},
+    {id:4,date:'2025-10-10',tag:'애착',quote:'고양이가 호 해줄 거야',summary:'고양이 인형 손을 가지고 자기 옷 입혀주거나 아픈 데 호 해주는 역할놀이 빈번.',analysis:'인형에 돌봄 역할을 부여하는 상상 놀이. 자기 위로를 외부 대상에 투영하는 방식.',images:[]},
+    {id:5,date:'2025-10-20',tag:'인지',quote:'달 쩌어기 있어',summary:'잘 때 달 보여주는 루틴을 쓰는데 달이 안 보이는 날, 아빠가 달은 자러 갔나 보다 하자 아니야 달 보게 해줄까 하며 직접 가리킴.',analysis:'부모의 의도를 파악하고 상황을 자기 방식으로 전환. 달이 없다는 논리를 인정하지 않고 주도권을 가져옴.',images:[]},
+    {id:6,date:'2025-10-25',tag:'언어',quote:'안 되는 건 안 되는 거야',summary:'아빠가 뽀뽀해달라고 하자 거절. 왜~ 해줘~ 하자 안 돼. 안 되는 건 안 되는 거야.',analysis:'아빠가 쓰던 훈육 논리를 역으로 사용. 신체 자율성을 언어로 명확히 표현.',images:[]},
+    {id:7,date:'2025-10-28',tag:'감정',quote:'이제 그만 할래 많이 했어 멈춰',summary:'아빠가 기어다니며 쫓아다니는 놀이는 좋아했는데 엄마가 비슷하게 하자 정확히 이제 그만 할래 많이 했어 멈춰 라고 말함.',analysis:'놀이 종료를 스스로 선언하는 자기 조절. 아빠 놀이와 엄마 놀이를 다르게 느끼고 있음.',images:[]},
+    {id:8,date:'2025-11-01',tag:'언어',quote:'햇님이 떨어진다',summary:'노을 지는 장면을 보고 한 말.',analysis:'해가 진다는 현상을 자기 직관으로 재구성. 지다가 아니라 떨어진다는 표현.',images:[]},
+    {id:9,date:'2026-01-05',tag:'인지',quote:'똥 지렸다',summary:'자기 싫어서 거짓말. 평소 아빠 부르거나 물 달라고 하던 아이가 잠옷까지 벗으며 등장.',analysis:'부모를 움직일 수 있는 가장 확실한 명분을 찾아낸 것. 목적과 수단을 구분해서 사용.',images:[]},
+    {id:10,date:'2026-01-10',tag:'자율성',quote:'그냥 유비야',summary:'이쁜 유비, 떼쟁이 유비 등 긍정부정 수식어 모두 거부. 아냐 유비라고 부르니 그건 맞다고 함.',analysis:'수식어 없이 이름 자체로 불리길 원하는 자아 정체성 표현. 아냐 유비는 내용이 아니라 부모와의 티키타카 놀이로 받아들인 것.',images:[]},
+    {id:11,date:'2026-01-13',tag:'신체',quote:'혼자 눈썰매 내려갈 거야',summary:'평창 여행에서 혼자 눈썰매 타겠다고 함. 진행 요원도 놀란 정도. 전동 드라이버 장난감도 집중해서 하고 됐다! 외침.',analysis:'신체 도전에서 성취동기가 강하게 나타남. 남이 해주는 것보다 혼자 해내는 것이 목표.',images:[]},
+    {id:12,date:'2026-01-20',tag:'감정',quote:'유비 버릴 거야?',summary:'아빠가 바쁜 날, 땅바닥 보며 기어가는 목소리로 물어봄. 아빠가 절대 안 버린다고 하자 바로 아빠 버려야지! 하며 장난으로 전환.',analysis:'불안을 혼자 삼키지 않고 꺼내서 확인받은 뒤 놀이로 전환. 아빠에게는 이런 것도 물어볼 수 있다는 신뢰.',images:[]},
+    {id:13,date:'2026-01-25',tag:'사회성',quote:'아빠는 유비 친구야?',summary:'아빠에게 직접 물어봄.',analysis:'수직 관계가 아닌 수평적 관계를 인식하기 시작. 친구라는 개념을 아빠에게 적용.',images:[]},
+    {id:14,date:'2026-02-01',tag:'인지',quote:'내일',summary:'자기 전 아빠가 안아주려 하자 내일이라고 하며 밀어냄. 아까라는 말도 모든 과거 행동에 붙이기 시작한 지 한두 달.',analysis:'시간 개념 형성. 내일을 거절의 도구로 처음 사용.',images:[]},
+    {id:15,date:'2026-02-05',tag:'언어',quote:'안돼 하면 안돼',summary:'자기 전 장난감 꺼내려다 제지당하자 엄마에게 한 말.',analysis:'부모가 쓰는 통제 언어를 역으로 사용. 규칙의 논리를 파악하고 있음.',images:[]},
+    {id:16,date:'2026-02-12',tag:'신체',quote:'됐다!',summary:'세발자전거 혼자 페달 밟고 처음으로 앞으로 나아간 날.',analysis:'신체 도전 성공 시 반응이 매우 강렬함. 해내는 기쁨이 도드라지는 기질.',images:[]},
+    {id:17,date:'2026-02-15',tag:'자율성',quote:'자물쇠로 꽉 잠그고 나왔어',summary:'엄마 초음파 사진 보고 동생에 대한 거부를 이렇게 표현.',analysis:'거부 의사를 직접 말하지 않고 은유로 포장. 감정을 언어로 가공하는 방식.',images:[]},
+    {id:18,date:'2026-02-19',tag:'신체',quote:'이건 발이야',summary:'29개월. 닫힌 폐곡선으로 고양이 얼굴 그리고 그 안에 점 두 개(눈), 밖에 뾰족한 귀. 구름도 따로 그림.',analysis:'도형 안팎을 구분해서 부위를 배치하는 공간 인식. 네모 나선 하트 이후 형태 표현이 빠르게 정교해지는 중.',images:[]},
+    {id:19,date:'2026-03-01',tag:'사회성',quote:'할아버지 집에서도 울었잖아',summary:'엄마가 울자 엄마 울지 마 하며 작년 49재 때 기억을 꺼내 연결.',analysis:'몇 달 전 공간과 현재 감정을 연결하는 기억. 어른의 슬픔에 자기 언어로 반응.',images:[]},
+    {id:20,date:'2026-03-05',tag:'애착',quote:'이불이 잃어버리면 슬퍼할 거야',summary:'사물에 감정을 이입하는 표현 빈번. 자신이 만든 걸 안 먹으면 진심으로 화냄.',analysis:'사물과 감정적 연결을 맺는 방식. 돌봄의 대상을 인형에서 사물 전반으로 확장.',images:[]},
+    {id:21,date:'2026-03-10',tag:'자율성',quote:'엄마 문 닫고 가',summary:'트랙터 운전석에 혼자 앉아서 한 말.',analysis:'탈것 조종 상황에서 통제권을 완전히 가져가려는 패턴. 차나 탈것에서 특히 강하게 나타남.',images:[]},
+    {id:22,date:'2026-03-15',tag:'인지',quote:'유비가 해준 거 안 먹으면 화낸다',summary:'모래놀이에서 만든 걸 안 먹자 한 말. 엄마가 밥 안 먹을 때 경험을 역할놀이에 정확히 적용.',analysis:'일상의 경험을 가상 상황에 옮겨 재현. 타인의 감정을 이해하고 역할을 바꿔서 표현.',images:[]},
+    {id:23,date:'2026-03-20',tag:'양육',quote:'편식쟁이 유비 왔어?',summary:'밥 안 먹을 때 스스로 편식쟁이 유비라고 칭함. 잘 먹을 때는 잘먹는 유비 돌아왔어? 라고 스스로 확인.',analysis:'부모가 쓰던 단어를 자기 정체성으로 내면화한 사례. 부모가 단어 사용을 멈춘 뒤 스스로 만든 시스템으로 변화.',images:[]},
+    {id:24,date:'2026-04-01',tag:'인지',quote:'타는 건 검정, 옷은 핑크',summary:'31개월. 용도에 따라 색 선호가 다름. 카시트 고를 때 편안함(기능)과 색깔을 분리해서 결정.',analysis:'용도와 맥락에 따라 분류하는 개념 정리. 기능과 디자인을 별개로 판단.',images:[]},
+    {id:25,date:'2026-04-05',tag:'자율성',quote:'아빠 손대지마',summary:'커피 태핑 중 도우려 하자. 젓가락 도와주려 해도 짜증. 고양이 똥 치우다 아빠한테 맡기고 도망갔는데 아빠 혼자 하면 또 짜증.',analysis:'내가 시작한 일이면 내가 끝내야 하고, 내가 맡긴 일도 내 의도대로 진행되어야 하는 통제 패턴.',images:[]},
+    {id:26,date:'2026-04-08',tag:'감정',quote:'아빠처럼 눈물이 툭',summary:'물감이 뚝 떨어지는 걸 보고 한 말.',analysis:'시각 자극을 감정 기억과 연결. 은유의 방향이 자연물에서 사람(아빠)으로 확장.',images:[]},
+    {id:27,date:'2026-04-10',tag:'사회성',quote:'버스에서 일어서면 안돼요',summary:'의자 줄 세워 버스놀이. 인형들 태우고 안전벨트 매라고 함. 아빠가 일어서자 베베핀 가사로 훈육.',analysis:'일상의 규칙을 역할놀이에 정확히 적용. 훈육의 방향이 역전됨.',images:[]},
+    {id:28,date:'2026-04-15',tag:'신체',quote:'아빠 누워봐',summary:'의자 점프 수십 번 반복. 이불을 스스로 착지 지점에 세팅한 뒤 아빠에게 누우라고 하고 배 위로 점프. 이후 아빠 배가 공식 착륙장으로 고정.',analysis:'착지 지점 확보 후 허락 확인 후 실행하는 순서. 충동적이 아닌 계획적 행동.',images:[]},
+    {id:29,date:'2026-04-19',tag:'언어',quote:'불편해',summary:'31개월. 불만족을 불편해로 표현하기 시작. 자신을 방해하는 대상을 나쁜놈이라 지칭. 사람 사물 동물 가리지 않고 적용.',analysis:'감정 어휘가 세분화되는 중. 싫어가 아닌 불편해로 상태를 객관화하는 표현.',images:[]},
+    {id:30,date:'2026-04-19',tag:'사회성',quote:'도도는 잘 있는데 노바는 기분이 안 좋다',summary:'이사 후 어린이집 선생님에게 한 말. 노바는 적응을 좀 힘들어하고 있었음.',analysis:'친구들의 감정 상태를 구분하고 제3자에게 전달. 관찰한 것을 언어로 옮기는 능력.',images:[]}
+];
+}
+
+function getDefaultCp() {
+  return [
+    {id:1,text:'등원 안아주기 횟수 변화',sub:'연휴 후 2→3번. 자연 감소 여부',done:false},
+    {id:2,text:'사과 목소리 크기',sub:'속삭임→자연스러운 목소리 전환 시점',done:false},
+    {id:3,text:'밤 기저귀 패턴',sub:'5/13 아침 성공. 며칠간 더 보기',done:false},
+    {id:4,text:'달력 추론 확장',sub:'빨간 날 외 다른 패턴 인식하는지',done:false},
+    {id:5,text:'비례 추론이 다른 놀이에서도 나타나는지',sub:'모래 버스/택시 이후',done:false},
+    {id:6,text:'피로 인식 후 자발적 휴식 패턴',sub:'뛰어내리기 이후. 다른 활동에서도 나타나는지',done:false},
+    {id:7,text:'이젤 그림 말하며 그리기 복귀',sub:'✓ 5/4 확인됨',done:true},
+    {id:8,text:'어린이집 신체 배변',sub:'✓ 하루 2회, 완전 안착',done:true},
+  ];
+}
+
+function getDefaultMonthlyReports() {
+  return [
+    {
+      id: 10000,
+      month: '2026-04',
+      period: '26개월~32개월 종합',
+      type: 'full',
+      obsCount: 30,
+      text: '2025년 10월~2026년 4월 (26개월~32개월) 종합 분석. 제미나이 기록 재정리본.\n\n【유비는 어떤 아이인가】세상을 자기만의 언어로 번역하고, 감정을 안에서 깊이 처리하며, 해내는 순간에 폭발하는 아이. 받는 기쁨보다 해내는 기쁨이 크고, 돌봄 본능이 강하며, 분명한 심미적 주관을 가짐. 통제권이 있을 때 관대하고, 환경 변화에 민감하며, 부모의 감정을 스펀지처럼 흡수함. 이 양면이 같은 뿌리에서 나옴. 빠르다는 것이 영재를 의미하지 않으며, 부모의 언어 환경(노을 보며 이쁘다, 화단 물주기)이 은유적 사고의 토양이 됨.\n\n【언어와 서사 구성】달님이 유비 눈물 닦아줬어(26개월), 햇님이 떨어진다, 자물쇠로 꽉 잠그고 나왔어, 아빠처럼 눈물이 툭. 감정을 자연물에 투영하는 은유적 발화. 화분 넘어뜨린 직후 아빠가 발 걸어서 넘어졌어 - 현실에 없는 인과관계를 즉석에서 창작. 콘텐츠 학습 내용을 저장했다가 맥락에 맞게 꺼내 쓰는 맥락 매칭 패턴 일관.\n\n【감정 처리 방식】기쁨을 외부로 폭발적으로 표현하지 않음. 물건 받을 때 수줍게 미소, 내면에서 곱씹는 방식. 반면 몸으로 해냈을 때(세발자전거 두 손 놓기, 첫 페달링, 드라이버 조이기)는 됐다! 두 손 번쩍. 받는 기쁨보다 해내는 기쁨이 훨씬 강렬한 성취동기(mastery motivation) 기질. 불쾌한 경험과 즐거운 경험을 분리하는 능력도 관찰.\n\n【자율성과 통제권】모든 상황에서 통제권을 유지하려는 욕구가 핵심. 신체 활동(눈썰매 혼자 타기, 전동차 조종 못 하면 하차), 과정 통제(봉지 꺼내기 처음부터, 커피 태핑 중 아빠 손대지마), 종료 주도권(세 번 네 번만 타고 가자 스스로 정함), 소유권(자기 장난감은 보여줘도 됨). 자기가 통제할 수 있는 상태에서는 관대하고 통제권이 위협받으면 닫는다.\n\n【공감과 돌봄 본능】외할머니에게 할머니 할아버지 집에서 울면 안 돼 - 보이지 않는 슬픔을 읽어냄. 엄마가 울 때 자기 이불을 잃는 경험으로 번역해 위로. 도도는 잘 있는데 노바는 기분이 안 좋다 - 선생님에게 친구 감정 중계. 인형놀이에서도 항상 돌봐주는 쪽. 집에 오면 낮에 수동적이었던 위치를 능동적으로 뒤집는 과정.\n\n【심미적 감각】옷에는 파랑/분홍/보라, 카시트/신발에는 검정, 네일은 빨간색 - 용도별 체계를 가진 자기 정체성 시스템. 검정 옷 나쁜놈은 색 자체 거부가 아니라 자기 표현 영역 규칙 위반. 쿨톤 블루, 화이트의 작고 소박한 야생화만 수집하는 심미안. 레이스/원피스/모자/장갑 거부는 감각 민감성+자기 이미지와의 불일치.\n\n【전략적 사고의 단계적 진화】명분 있는 거짓말(똥 지렸다) → 감정적 약점 이용(아빠 안아주면 좋아해?) → 훈육 논리 역이용(안 되는 건 안 되는 거야) → 실시간 서사 재구성(아빠가 발 걸어서 넘어졌어) → 거래형 협상(세 번 네 번만 타고 가자).\n\n【라벨링 경고】편식쟁이 유비를 자기 정체성으로 내면화한 사례 관찰. 부모가 단어 사용 중단한 것은 적절. 아이는 부모가 반복적으로 쓰는 라벨을 정체성으로 흡수함. 똑똑한 유비도 착한 유비도 같은 방식으로 작동. 과잉 칭찬에도 주의 필요.\n\n【애착 패턴】이불이→고양이인형→치타→코끼리로 단계적 전환 중. 이불이를 버린 것이 아니라 돌봐주는 대상으로 재배치. 유비 버릴 거야? 에피소드 - 환경 변화 감지 후 불안을 꺼내고 확인받자마자 아빠 버려야지!로 전환. 혼자 삼키지 않고 꺼낼 수 있는 신뢰+확인 후 놀이로 돌아오는 회복탄력성. 새 환경 적응에 약 한 달 반 소요 기준선 확보.\n\n【핵심 양육 조언】인지 일부 영역은 빠르지만 감정 조절은 32개월 그대로. 말이 통한다고 감정까지 다스릴 수 있다고 기대하면 안 됨. 종료 주도권은 범위 안의 선택으로(세 번이냐 다섯 번이냐). 화낼 때 속상해 단어 선택이 유비에게도 좋은 모델링. 복구 공식: 방식에 대해서만 사과하고 원칙은 유지. 라벨 대신 그때 그 순간에 유비가 한 것을 읽어주는 습관.',
+      createdAt: '2026-04-26T00:00:00.000Z'
+    },
+    {
+      id: 10001,
+      month: '2026-05',
+      period: '4월 말~5월 초',
+      type: 'full',
+      obsCount: 19,
+      text: '2026년 4월 말 ~ 5월 초 (32개월 초반) 관찰 기록.\n\n핵심 변화 네 가지: 자기 완결 기준이 외부(부모 확인)에서 내부(자기 판단)로 이동하고 있다. 돌봄과 생산의 대상이 인형에서 실제 사람으로 확장되고 있다. 도움 수용 방식이 무조건 거부에서 선택적 수용으로 성숙하고 있다. 공간별 규칙 구분과 자의식이 빠르게 정교해지고 있다.\n\n【자기 완결 기준의 내부 이동】클레이 작업에서 다 된 거야?라는 외부 확인 질문이 사라지고 스스로 완성을 판단하고 다음 행동으로 넘어가는 패턴이 일관되게 나타남. 완성도 내가 정한다로 진화. 시각 영역(이젤)에서만 관찰되던 자기 모니터링이 촉각/조형 영역(클레이)까지 확장.\n\n【돌봄 대상의 확장】클레이 반지를 어린이집 선생님에게 다섯 개 만들어주고 손가락에 직접 끼워줌. 인형→부모/선생님→또래로 돌봄 대상이 확장되고 있음. 받는 기쁨보다 만들어주는 기쁨이 강한 기질이 여기서도 작동.\n\n【도움 수용의 성숙】와플블록에서 아빠 도와줄까?에 처음으로 거부하지 않음. 조건은 주도권은 유비, 보조만 아빠 구조. 이어서 아빠 삼각형은 어떻게 그려?라는 능동적 질문 출현. 무조건 혼자에서 필요할 때 물어봐도 돼로 전환.\n\n【그리기의 폭발적 진화】얼굴 윤곽+눈+코+입+귀+팔+몸통이 포함된 인물화 출현. 한 화면에 여러 캐릭터를 관계적으로 배치하고 서사 부여(저리 가 그랬대). 고양이 그릴 거야 선언 후 외곽→귀→눈→코→입 순서로 그리는 계획적 실행. 말하며 그리기 패턴 복귀.\n\n【어린이집 적응 안착】이따가 또 어린이집 가? 라고 다시 가고 싶다고 표현. 선생님에게 클레이 반지 만들어줌. 어린이집에서 하루 두 번 배변(이전 어린이집 1년간 서너 번 대비 현저한 변화).\n\n【달의 언어 진화】26개월: 달님이 유비 눈물 닦아줬어(감정 투영). 32개월: 달님이 밝게 불 켜줘서 좋아(관찰+의인화+감정의 세 층위). 같은 대상에 대한 관계가 위로받는 존재에서 기능을 인식하는 존재로 변화.\n\n【사과의 출현】잘못했을 때 속삭이듯 사과하는 행동이 새롭게 관찰됨. 자존심과 도덕 인식이 부딪히는 지점에서 유비 나름의 타협점을 찾은 것.',
+      createdAt: '2026-05-04T00:00:00.000Z'
+    },
+    {
+      id: 10002,
+      month: '2026-05',
+      period: '5월 초~8일',
+      type: 'full',
+      obsCount: 10,
+      text: '2026년 5월 초~8일 (32개월 초중반) 관찰 기록.\n\n핵심 변화 다섯 가지: 가상놀이가 도구 없이 동작만으로 시뮬레이션하는 단계에 진입. 비례 추론과 누적 카운트 등 4세 이후에 통상 나타나는 인지 능력이 자연스러운 놀이 맥락에서 관찰. 협상의 구조를 이해하고 자기 정체성을 지키면서 안전망을 받아들이는 방식이 정착. 갈등 후 관계 회복 사이클이 양방향으로 작동. 왜? 질문기의 입구에 진입.\n\n【모래놀이 1시간 반 세션】아이스크림→밥→국으로 음식을 바꾸며 식사 예절 전체 시퀀스 진행(흘리지 말고→네 했으니 먹자→감사합니다→잘 먹겠습니다). 버스는 크니까 이만큼, 택시는 작으니까 이만큼 하며 크기에 비례해 모래 분배. 파란 모래를 눈으로 재해석하고 버스에 눈이 쌓인 장면 구성.\n\n【가상놀이 3단계 진입】청진기 없이 청진기 귀에 차는 시늉+인형 배에 대는 동작. 안전벨트 없이 차는 시늉. 도구 없이 도구를 시뮬레이션하는 단계로 통상 3세 전후에 나타나는 것.\n\n【귀납적 추론의 출현】엄마 금니 설명 이틀 후 할머니 금니 보고 할머니도 이빨 안 닦았어? 라고 질문. 한 사례에서 패턴을 추출하고 새 사례에 적용하는 귀납적 추론의 초기 형태.\n\n【기저귀 협상】기저귀 절대 거부했으나 쉬 마려우면 사고 바로 벗겨줄게 조건 제시에 수용. 자기 정체성(나는 기저귀 안 한다)을 유지하면서 안전망을 비상용으로 재배치한 것. 이 구조로 5시간 논스톱 차량 이동 가능.\n\n【갈등과 회복 사이클】양치 갈등 후 유비가 먼저 아빠 미안해요 라고 직접 사과. 다음 날 아빠가 사과+약속+원칙 유지+신체 접촉으로 회복. 잘못은 관계를 끝내지 않는다는 경험이 양방향으로 작동.\n\n【비례 추론과 누적 카운트】버스/택시 크기 비례 분배. 우리 배 두 개 탔지? 라고 갈 때 한 척+올 때 한 척을 자발적으로 합산.\n\n【달의 언어 비교】26개월 달님이 유비 눈물 닦아줬어, 32개월 초 달님이 불을 밝혀줘서 좋아, 32개월 중반 버스는 크니까 이만큼. 위로 대상→기능 인식→비례적 분배 사고로 점진적으로 정교해지고 있음.',
+      createdAt: '2026-05-08T00:00:00.000Z'
+    }
+    ,{
+      id: 10003,
+      month: '2026-05',
+      period: '5월 8~13일',
+      type: 'full',
+      obsCount: 15,
+      text: '2026년 5월 8~13일 (32개월 중반) 관찰 기록. 실시간 누적 방식. 아빠 원문 보존 우선, 과잉 해석 경계.\n\n【이번 주 가장 의미 있는 장면】드러누워서 악 쓰고 발 구르는데, 아빠가 몰래 옆에서 봤더니 거실에서 유비 방 쪽으로 점점 이동하고 있었다. 감정은 진짜, 자존심은 유지, 본능은 안전기지를 향함, 그리고 즉석에서 절충안 발명(걷는 건 아니니까 떼는 유지, 거리는 좁혀짐). 엄마가 침대에서 손만 뻗어주자 손을 잡음. 아빠가 몰래 봤기 때문에 유비의 자기 처리 과정이 온전히 보존됐다.\n\n【위임의 정교화】색칠놀이에서 잘 칠하다가 어려워지자 이거 어려운 거야~ 아빠가 해봐 로 위임. 아빠가 점묘법으로 칠하자 이거 하지마 하지마. 실행은 넘겼지만 결과물 이미지는 유비가 유지. 통제 중독이 아니라 자기 비전을 가진 창작자의 디렉팅 감각에 가까운 것. 이건 어렵다의 귀인 방식도 나는 못해가 아니라 이게 원래 어려운 것으로 일관되게 유지(와플블록과 동일).\n\n【달력 추론】오늘 = 빨간색 + 안 가는 날이라는 정보 1개에서 패턴을 추출하고 다른 빨간 날들에 적용해 이날은 안 가? 라고 가설을 검증하는 질문 형태로 던짐. 0508 보고서 금니 추론과 같은 결의 귀납적 추론. 동기는 어린이집 안 가는 날 찾기.\n\n【협상 화법의 일상화】아빠 일하는 중 유비랑 같이 놀자~ 로 시작해서 안 통할 것 같자 같이 노는 건 어때? 로 즉시 전환. 부모가 유비에게 쓰던 화법을 맥락에 정확히 맞게 되돌려줌. 기저귀 농담 장면에서도 절대 안 쌀 거래 + 아빠랑 안 자 로 농담 결에서 응답하면서 자기 선호는 실제로 유지.\n\n【연휴 후 등원 패턴】3일 연속 2~3번 안아주고 뒤돌아보지 않고 교실로. 안아주는 횟수 증가=충전 필요량 증가, 뒤돌아보지 않음=분리 불안 없음. 어린이집이 싫은 게 아니라 연휴 동안 가족 시간이 좋았던 것. 이번 주 내 자연 감소 여부 관찰 중.\n\n【미디어 처리】뽀로로 극장판 1시간 10분 완주(중간에 화장실 다녀옴, 신체 신호>미디어). 이후 보드게임 자발 요청. 의존 신호 없음. 컨디션 저하 날에는 차분한 다니엘 타이거 선택. 영어로 보는 건 재미 없데 라고 콘텐츠 평가.\n\n【구름사다리 매달리기】약 5분 5~6회 반복. 양손 봉 잡고 전체 체중 지탱, 자세 안정적. 아빠와 함께 매달리는 사진에서 표정 매우 즐거움. 해내는 기쁨 추구 기질이 신체에서도 일관.\n\n【밤 배변 현황】1차 팬티 시도 이틀 연속 이불 빨래, 기저귀 재착용 설득 수용, 5/12 밤 방수 시트 깔고 팬티로 잠, 5/13 아침 화장실에서 쉬 성공(이불 안 쌈). 내일도 그럴지는 알 수 없음(아빠 코멘트). 5살까지 싼다고 하잖아 이불 빨면 되지 뭐 - 이 자세가 이 영역에서 가장 중요한 양육 자세.',
+      createdAt: '2026-05-13T00:00:00.000Z'
+    }
+  ];
+}
+
+// ════════════════════════════════════════════════════════════
+// 테마
+// ════════════════════════════════════════════════════════════
+const THEMES = ['beige', 'magenta', 'charcoal', 'navy'];
+const SK_THEME = 'ubi_theme';
+
+function setTheme(name) {
+  if (!THEMES.includes(name)) name = 'beige';
+  THEMES.forEach(t => document.body.classList.remove('theme-' + t));
+  document.body.classList.add('theme-' + name);
+  localStorage.setItem(SK_THEME, name);
+  // 스와치 active 상태 갱신
+  document.querySelectorAll('.theme-swatch').forEach(el => {
+    el.classList.toggle('active', el.dataset.theme === name);
+  });
+}
+
+function initTheme() {
+  const saved = localStorage.getItem(SK_THEME) || 'beige';
+  setTheme(saved);
+}
+
+// ════════════════════════════════════════════════════════════
+// 시작
+// ════════════════════════════════════════════════════════════
+function setMobileNav(el) {
+  document.querySelectorAll('.mobile-nav-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+}
+
+initTheme();
+
+// 로고 월령 업데이트
+const logoAge = document.getElementById('logo-age');
+if (logoAge) logoAge.textContent = `${getUbiAgeLabel()} · 2025.10~`;
+
+loadData();
+</script>
+</body>
+</html>
