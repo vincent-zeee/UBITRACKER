@@ -1319,15 +1319,17 @@ const FIREBASE_CONFIG = {
 
 let db = null;
 
+let _fbFns = null;
+
 async function initFirebase() {
+  if (_fbFns) return true;
   try {
-    const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
-    const { getFirestore, doc, setDoc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-    const app = initializeApp(FIREBASE_CONFIG);
+    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
+    const { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc, writeBatch } =
+      await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    const app = getApps().length ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
     db = getFirestore(app);
-    window._fbDoc = doc(db, 'ubi', 'main');
-    window._fbSetDoc = setDoc;
-    window._fbGetDoc = getDoc;
+    _fbFns = { doc, setDoc, getDoc, collection, getDocs, deleteDoc, writeBatch };
     console.log('Firebase 연결 성공');
     return true;
   } catch(e) {
@@ -1337,31 +1339,43 @@ async function initFirebase() {
 }
 
 // ════════════════════════════════════════════════════════════
-// 저장소
+// 저장소 — 개별 문서 방식 (동시 접속 충돌 방지)
 // ════════════════════════════════════════════════════════════
 async function loadData() {
   const fbOk = await initFirebase();
 
   if (fbOk) {
     try {
-      const snap = await window._fbGetDoc(window._fbDoc);
-      if (snap.exists()) {
-        const d = snap.data();
-        observations   = (d.observations   && d.observations.length)   ? d.observations   : getDefaultObs();
-        checkpoints    = (d.checkpoints    && d.checkpoints.length)    ? d.checkpoints    : getDefaultCp();
-        monthlyReports = (d.monthlyReports && d.monthlyReports.length) ? d.monthlyReports : getDefaultMonthlyReports();
-        // API Key
-        if (d.apiKey) {
-          apiKey = d.apiKey;
+      const { doc, getDoc, collection, getDocs } = _fbFns;
+
+      // 설정 (API Key 등)
+      const cfgSnap = await getDoc(doc(db, 'ubi', 'config'));
+      if (cfgSnap.exists()) {
+        const cfg = cfgSnap.data();
+        if (cfg.apiKey) {
+          apiKey = cfg.apiKey;
           document.getElementById('api-key-input').value = '(저장됨)';
         }
-        showSyncStatus('✓ 동기화됨');
-      } else {
-        observations   = getDefaultObs();
-        checkpoints    = getDefaultCp();
-        monthlyReports = getDefaultMonthlyReports();
-        await saveData();
       }
+
+      // 관찰 기록 — 개별 문서
+      const obsSnap = await getDocs(collection(db, 'observations'));
+      if (!obsSnap.empty) {
+        observations = obsSnap.docs.map(d => d.data()).sort((a,b) => b.date.localeCompare(a.date));
+      } else {
+        observations = getDefaultObs();
+        await saveAllObs();
+      }
+
+      // 체크포인트
+      const cpSnap = await getDoc(doc(db, 'ubi', 'checkpoints'));
+      checkpoints = cpSnap.exists() && cpSnap.data().list?.length ? cpSnap.data().list : getDefaultCp();
+
+      // 보고서
+      const rpSnap = await getDoc(doc(db, 'ubi', 'reports'));
+      monthlyReports = rpSnap.exists() && rpSnap.data().list?.length ? rpSnap.data().list : getDefaultMonthlyReports();
+
+      showSyncStatus('✓ 동기화됨');
     } catch(e) {
       console.log('Firebase 로드 실패, localStorage 폴백:', e.message);
       loadFromLocal();
@@ -1400,22 +1414,58 @@ function loadFromLocal() {
   }
 }
 
-async function saveData() {
-  const payload = { observations, checkpoints, monthlyReports, savedAt: new Date().toISOString() };
-  if (apiKey && apiKey !== '__server__') payload.apiKey = apiKey;
-
-  // Firebase 저장
-  if (window._fbDoc && window._fbSetDoc) {
-    try {
-      await window._fbSetDoc(window._fbDoc, payload);
-      showSyncStatus('✓ 저장됨');
-    } catch(e) {
-      console.log('Firebase 저장 실패:', e.message);
-      showSyncStatus('⚠ 저장 실패');
-    }
+// 관찰 기록 하나 저장 (충돌 없음)
+async function saveOneObs(obs) {
+  if (!_fbFns) return;
+  try {
+    const { doc, setDoc } = _fbFns;
+    await setDoc(doc(db, 'observations', String(obs.id)), obs);
+    showSyncStatus('✓ 저장됨');
+  } catch(e) {
+    console.log('obs 저장 실패:', e.message);
+    showSyncStatus('⚠ 저장 실패');
   }
-  // localStorage 백업
-  try { localStorage.setItem('ubi_data', JSON.stringify(payload)); } catch(e) {}
+}
+
+// 관찰 기록 하나 삭제
+async function deleteOneObs(id) {
+  if (!_fbFns) return;
+  try {
+    const { doc, deleteDoc } = _fbFns;
+    await deleteDoc(doc(db, 'observations', String(id)));
+  } catch(e) { console.log('obs 삭제 실패:', e.message); }
+}
+
+// 전체 관찰 기록 일괄 저장 (초기화용)
+async function saveAllObs() {
+  if (!_fbFns) return;
+  try {
+    const { doc, writeBatch } = _fbFns;
+    const batch = writeBatch(db);
+    observations.forEach(o => batch.set(doc(db, 'observations', String(o.id)), o));
+    await batch.commit();
+  } catch(e) { console.log('전체 obs 저장 실패:', e.message); }
+}
+
+async function saveData() {
+  if (!_fbFns) {
+    try { localStorage.setItem('ubi_data', JSON.stringify({ observations, checkpoints, monthlyReports })); } catch(e) {}
+    return;
+  }
+  try {
+    const { doc, setDoc } = _fbFns;
+    const tasks = [
+      setDoc(doc(db, 'ubi', 'checkpoints'), { list: checkpoints, savedAt: new Date().toISOString() }),
+      setDoc(doc(db, 'ubi', 'reports'),     { list: monthlyReports, savedAt: new Date().toISOString() }),
+    ];
+    if (apiKey) tasks.push(setDoc(doc(db, 'ubi', 'config'), { apiKey, savedAt: new Date().toISOString() }));
+    await Promise.all(tasks);
+    showSyncStatus('✓ 저장됨');
+  } catch(e) {
+    console.log('saveData 실패:', e.message);
+    showSyncStatus('⚠ 저장 실패');
+  }
+  try { localStorage.setItem('ubi_data', JSON.stringify({ observations, checkpoints, monthlyReports })); } catch(e) {}
 }
 
 function showSyncStatus(msg) {
@@ -1425,6 +1475,7 @@ function showSyncStatus(msg) {
   setTimeout(() => { el.textContent = ''; }, 3000);
 }
 
+// 관찰 저장은 개별로
 function saveObs() { saveData(); }
 function saveCp()  { saveData(); }
 async function saveKey(key) {
@@ -1579,7 +1630,7 @@ async function deleteObs(id) {
   const idx = observations.findIndex(o => o.id === id);
   if (idx < 0) return;
   observations.splice(idx, 1);
-  await saveData();
+  await deleteOneObs(id);  // 개별 문서 삭제
   toast('삭제됐어요');
   renderAll();
 }
@@ -1745,7 +1796,7 @@ async function doAnalyze() {
 async function doSave() {
   if (!pending) return;
   observations.push(pending);
-  await saveData();
+  await saveOneObs(pending);  // 개별 문서로 저장 (충돌 없음)
   pending = null;
   pendingImgs = [];
   document.getElementById('obs-text').value = '';
