@@ -1178,10 +1178,15 @@ input[type="date"]:focus, select:focus { outline: none; border-color: var(--acce
 // API 호출 헬퍼 — 로컬 서버 프록시 경유
 // ════════════════════════════════════════════════════════════
 async function callAnthropic(key, body) {
-  if (key !== '__server__') body._key = key;
-  const res = await fetch('/api/analyze', {
+  const useKey = (key && key !== '__server__') ? key : apiKey;
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': useKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
     body: JSON.stringify(body)
   });
   const data = await res.json();
@@ -2084,20 +2089,24 @@ async function saveApiKey() {
 
 async function testApiKey() {
   const key = document.getElementById('api-key-input').value.trim();
-  const testKey = (key && key !== '(서버에 저장됨)') ? key : '__server__';
+  if (!key || key === '(저장됨)') { alert('API Key를 입력해주세요.'); return; }
   try {
-    const res = await callAnthropic(testKey, {
-      model: 'claude-sonnet-4-6',
-      max_tokens: 10,
-      messages: [{ role: 'user', content: 'hi' }]
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 10, messages: [{ role: 'user', content: 'hi' }] })
     });
+    const data = await res.json();
     if (res.ok) {
       alert('✅ 연결 성공!');
-      if (testKey !== '__server__') await saveKey(testKey);
-      updateApiStatus();
+      await saveApiKey();
     } else {
-      const e = await res.json();
-      alert('❌ 오류: ' + (e.error?.message || res.status));
+      alert('❌ 오류: ' + (data.error?.message || res.status));
     }
   } catch(e) { alert('❌ 연결 실패: ' + e.message); }
 }
