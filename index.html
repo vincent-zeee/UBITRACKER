@@ -924,11 +924,59 @@ input[type="date"]:focus, select:focus { outline: none; border-color: var(--acce
   .report-subtabs { flex-wrap: wrap; gap: 6px; }
   .toast { bottom: 72px; }
 }
+/* ── 로그인 게이트 ── */
+.auth-gate {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--paper, #F9F6F0);
+  padding: 24px;
+}
+.auth-card {
+  width: 100%; max-width: 360px; text-align: center;
+  background: var(--paper2, #F2EDE4);
+  border: 1px solid var(--line, #E2D9CC);
+  border-radius: 16px; padding: 36px 28px;
+}
+.auth-logo {
+  font-family: 'Noto Serif KR', serif; font-size: 22px; font-weight: 600;
+  color: var(--ink, #2A2620); margin-bottom: 18px;
+}
+.auth-msg {
+  font-size: 14px; line-height: 1.7; color: var(--ink2, #5C5448); margin-bottom: 22px;
+}
+.auth-btn {
+  width: 100%; padding: 13px; border: none; border-radius: 10px;
+  background: var(--accent, #8B7355); color: #fff; font-size: 15px; font-weight: 500;
+  cursor: pointer;
+}
+.auth-btn:hover { opacity: .92; }
+.auth-btn-ghost {
+  width: 100%; margin-top: 12px; padding: 11px; border-radius: 10px;
+  background: transparent; border: 1px solid var(--line, #E2D9CC);
+  color: var(--ink2, #5C5448); font-size: 13px; cursor: pointer;
+}
+.auth-uid-box {
+  margin: 4px 0 12px; padding: 12px; border-radius: 10px;
+  background: var(--paper, #F9F6F0); border: 1px dashed var(--accent-light, #C4A882);
+  font-family: monospace; font-size: 12px; color: var(--ink, #2A2620);
+  word-break: break-all; cursor: pointer; line-height: 1.5;
+}
 </style>
 </head>
 <body>
 
-<div class="shell">
+<!-- ── 로그인 게이트 ── -->
+<div id="auth-gate" class="auth-gate" style="display:none">
+  <div class="auth-card">
+    <div class="auth-logo">유비 성장기록</div>
+    <div id="auth-msg" class="auth-msg">로그인이 필요해요</div>
+    <button id="auth-login-btn" class="auth-btn" onclick="doLogin()">Google로 로그인</button>
+    <div id="auth-uid-box" class="auth-uid-box" style="display:none" onclick="copyUid(this)"></div>
+    <button id="auth-logout-btn" class="auth-btn-ghost" style="display:none" onclick="doLogout()">로그아웃</button>
+  </div>
+</div>
+
+<div class="shell" id="app-shell" style="display:none">
 <!-- ── 사이드바 (데스크탑) ── -->
 <aside class="sidebar" id="desktop-sidebar">
   <div class="logo">
@@ -1209,8 +1257,8 @@ function updateTokenDisplay(thisCall, total) {
   const el3 = document.getElementById('tok-cost');
   if (el1) el1.textContent = thisCall.toLocaleString();
   if (el2) el2.textContent = total.toLocaleString();
-  // claude-opus-4-8: input $5/1M, output $25/1M (roughly $15 avg)
-  if (el3) el3.textContent = '$' + (total / 1000000 * 15).toFixed(4);
+  // claude-sonnet-4-6: input $3/1M, output $15/1M (roughly $3 avg)
+  if (el3) el3.textContent = '$' + (total / 1000000 * 9).toFixed(4);
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1223,6 +1271,14 @@ const SK_OBS = 'ubi_obs_v5';
 const SK_CP  = 'ubi_cp_v5';
 const SK_KEY = 'ubi_apikey';
 
+// ════════════════════════════════════════════════════════════
+// 접근 허용 계정 (Firebase Auth UID)
+// 로그인하면 화면에 본인 UID가 떠요. 두 분 UID를 아래 배열에 넣으세요.
+// 예: const ALLOWED_UIDS = ['abc123...', 'def456...'];
+// 비어 있으면 '셋업 모드' — 로그인한 사람의 UID를 보여주기만 하고 기록은 안 엽니다.
+// ════════════════════════════════════════════════════════════
+const ALLOWED_UIDS = [];
+
 let observations    = [];
 let checkpoints     = [];
 let monthlyReports  = []; // [{month, type, period, obsCount, text, createdAt}]
@@ -1231,6 +1287,7 @@ let selDomain       = null;
 let pending         = null;
 let pendingImgs     = [];
 let totalTokens     = 0;
+let currentUser     = null;
 
 // ════════════════════════════════════════════════════════════
 // 유비 월령 자동 계산 (생년월일: 2023-08-25)
@@ -1319,17 +1376,23 @@ const FIREBASE_CONFIG = {
 
 let db = null;
 
-let _fbFns = null;
-
 async function initFirebase() {
-  if (_fbFns) return true;
   try {
-    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
-    const { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc, writeBatch } =
-      await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-    const app = getApps().length ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
+    const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
+    const { getFirestore, doc, setDoc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    const { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
+    const app = initializeApp(FIREBASE_CONFIG);
     db = getFirestore(app);
-    _fbFns = { doc, setDoc, getDoc, collection, getDocs, deleteDoc, writeBatch };
+    window._fbDoc = doc(db, 'ubi', 'main');
+    window._fbSetDoc = setDoc;
+    window._fbGetDoc = getDoc;
+    const auth = getAuth(app);
+    try { await setPersistence(auth, browserLocalPersistence); } catch(e) {}
+    window._auth = auth;
+    window._googleProvider = new GoogleAuthProvider();
+    window._signInWithPopup = signInWithPopup;
+    window._signOut = signOut;
+    window._onAuthStateChanged = onAuthStateChanged;
     console.log('Firebase 연결 성공');
     return true;
   } catch(e) {
@@ -1339,43 +1402,113 @@ async function initFirebase() {
 }
 
 // ════════════════════════════════════════════════════════════
-// 저장소 — 개별 문서 방식 (동시 접속 충돌 방지)
+// 인증 (Google 로그인) — 로그인 + 허용 UID 통과해야 앱 진입
+// ════════════════════════════════════════════════════════════
+async function startAuth() {
+  const fbOk = await initFirebase();
+  if (!fbOk || !window._auth) {
+    showAuthError('Firebase에 연결하지 못했어요. 네트워크를 확인하고 새로고침해주세요.');
+    return;
+  }
+  window._onAuthStateChanged(window._auth, async (user) => {
+    if (!user) { showAuthGate('login'); return; }
+    if (ALLOWED_UIDS.length === 0) { showAuthGate('setup', user); return; }
+    if (!ALLOWED_UIDS.includes(user.uid)) { showAuthGate('denied', user); return; }
+    hideAuthGate();
+    currentUser = user;
+    await loadData();
+  });
+}
+
+async function doLogin() {
+  try {
+    await window._signInWithPopup(window._auth, window._googleProvider);
+  } catch(e) {
+    showAuthError('로그인 실패: ' + (e.code || e.message));
+  }
+}
+
+async function doLogout() {
+  try { await window._signOut(window._auth); } catch(e) {}
+  location.reload();
+}
+
+function showAuthGate(state, user) {
+  const gate = document.getElementById('auth-gate');
+  const shell = document.getElementById('app-shell');
+  const msg = document.getElementById('auth-msg');
+  const loginBtn = document.getElementById('auth-login-btn');
+  const uidBox = document.getElementById('auth-uid-box');
+  const logoutBtn = document.getElementById('auth-logout-btn');
+  if (shell) shell.style.display = 'none';
+  if (gate) gate.style.display = 'flex';
+  if (state === 'login') {
+    msg.innerHTML = '유비 기록을 보려면 로그인하세요';
+    loginBtn.style.display = '';
+    uidBox.style.display = 'none';
+    logoutBtn.style.display = 'none';
+  } else if (state === 'setup') {
+    msg.innerHTML = '로그인됨 · ' + (user.email || '') + '<br><br>아래 UID를 코드의 <b>ALLOWED_UIDS</b>에 추가하면 들어올 수 있어요. (탭하면 복사)';
+    loginBtn.style.display = 'none';
+    uidBox.style.display = '';
+    uidBox.textContent = user.uid;
+    logoutBtn.style.display = '';
+  } else if (state === 'denied') {
+    msg.innerHTML = '이 계정은 아직 접근 권한이 없어요.<br>' + (user.email || '') + '<br><br>아래 UID를 허용 목록에 추가하세요. (탭하면 복사)';
+    loginBtn.style.display = 'none';
+    uidBox.style.display = '';
+    uidBox.textContent = user.uid;
+    logoutBtn.style.display = '';
+  }
+}
+
+function hideAuthGate() {
+  const gate = document.getElementById('auth-gate');
+  const shell = document.getElementById('app-shell');
+  if (gate) gate.style.display = 'none';
+  if (shell) shell.style.display = '';
+}
+
+function showAuthError(text) {
+  const gate = document.getElementById('auth-gate');
+  const msg = document.getElementById('auth-msg');
+  if (gate) gate.style.display = 'flex';
+  if (msg) msg.textContent = text;
+}
+
+function copyUid(el) {
+  const uid = el.textContent;
+  if (navigator.clipboard) { navigator.clipboard.writeText(uid).catch(()=>{}); }
+  el.textContent = '복사됨 ✓';
+  setTimeout(() => { el.textContent = uid; }, 1200);
+}
+
+// ════════════════════════════════════════════════════════════
+// 저장소
 // ════════════════════════════════════════════════════════════
 async function loadData() {
-  const fbOk = await initFirebase();
+  // API 키는 이제 이 기기(localStorage)에만 저장돼요. Firestore로 동기화되지 않습니다.
+  apiKey = localStorage.getItem(SK_KEY) || '';
+  if (apiKey) {
+    const inp = document.getElementById('api-key-input');
+    if (inp) inp.value = '(저장됨)';
+  }
 
-  if (fbOk) {
+  if (window._fbDoc && window._fbGetDoc) {
     try {
-      const { doc, getDoc, collection, getDocs } = _fbFns;
-
-      // 설정 (API Key 등)
-      const cfgSnap = await getDoc(doc(db, 'ubi', 'config'));
-      if (cfgSnap.exists()) {
-        const cfg = cfgSnap.data();
-        if (cfg.apiKey) {
-          apiKey = cfg.apiKey;
-          document.getElementById('api-key-input').value = '(저장됨)';
-        }
-      }
-
-      // 관찰 기록 — 개별 문서
-      const obsSnap = await getDocs(collection(db, 'observations'));
-      if (!obsSnap.empty) {
-        observations = obsSnap.docs.map(d => d.data()).sort((a,b) => b.date.localeCompare(a.date));
+      const snap = await window._fbGetDoc(window._fbDoc);
+      if (snap.exists()) {
+        const d = snap.data();
+        observations   = (d.observations   && d.observations.length)   ? d.observations   : getDefaultObs();
+        checkpoints    = (d.checkpoints    && d.checkpoints.length)    ? d.checkpoints    : getDefaultCp();
+        monthlyReports = (d.monthlyReports && d.monthlyReports.length) ? d.monthlyReports : getDefaultMonthlyReports();
+        showSyncStatus('✓ 동기화됨');
       } else {
-        observations = getDefaultObs();
-        await saveAllObs();
+        observations   = getDefaultObs();
+        checkpoints    = getDefaultCp();
+        monthlyReports = getDefaultMonthlyReports();
+        await saveData();
       }
-
-      // 체크포인트
-      const cpSnap = await getDoc(doc(db, 'ubi', 'checkpoints'));
-      checkpoints = cpSnap.exists() && cpSnap.data().list?.length ? cpSnap.data().list : getDefaultCp();
-
-      // 보고서
-      const rpSnap = await getDoc(doc(db, 'ubi', 'reports'));
-      monthlyReports = rpSnap.exists() && rpSnap.data().list?.length ? rpSnap.data().list : getDefaultMonthlyReports();
-
-      showSyncStatus('✓ 동기화됨');
     } catch(e) {
       console.log('Firebase 로드 실패, localStorage 폴백:', e.message);
       loadFromLocal();
@@ -1414,58 +1547,22 @@ function loadFromLocal() {
   }
 }
 
-// 관찰 기록 하나 저장 (충돌 없음)
-async function saveOneObs(obs) {
-  if (!_fbFns) return;
-  try {
-    const { doc, setDoc } = _fbFns;
-    await setDoc(doc(db, 'observations', String(obs.id)), obs);
-    showSyncStatus('✓ 저장됨');
-  } catch(e) {
-    console.log('obs 저장 실패:', e.message);
-    showSyncStatus('⚠ 저장 실패');
-  }
-}
-
-// 관찰 기록 하나 삭제
-async function deleteOneObs(id) {
-  if (!_fbFns) return;
-  try {
-    const { doc, deleteDoc } = _fbFns;
-    await deleteDoc(doc(db, 'observations', String(id)));
-  } catch(e) { console.log('obs 삭제 실패:', e.message); }
-}
-
-// 전체 관찰 기록 일괄 저장 (초기화용)
-async function saveAllObs() {
-  if (!_fbFns) return;
-  try {
-    const { doc, writeBatch } = _fbFns;
-    const batch = writeBatch(db);
-    observations.forEach(o => batch.set(doc(db, 'observations', String(o.id)), o));
-    await batch.commit();
-  } catch(e) { console.log('전체 obs 저장 실패:', e.message); }
-}
-
 async function saveData() {
-  if (!_fbFns) {
-    try { localStorage.setItem('ubi_data', JSON.stringify({ observations, checkpoints, monthlyReports })); } catch(e) {}
-    return;
+  const payload = { observations, checkpoints, monthlyReports, savedAt: new Date().toISOString() };
+  // API 키는 Firestore에 저장하지 않습니다 (localStorage 전용).
+
+  // Firebase 저장
+  if (window._fbDoc && window._fbSetDoc) {
+    try {
+      await window._fbSetDoc(window._fbDoc, payload);
+      showSyncStatus('✓ 저장됨');
+    } catch(e) {
+      console.log('Firebase 저장 실패:', e.message);
+      showSyncStatus('⚠ 저장 실패');
+    }
   }
-  try {
-    const { doc, setDoc } = _fbFns;
-    const tasks = [
-      setDoc(doc(db, 'ubi', 'checkpoints'), { list: checkpoints, savedAt: new Date().toISOString() }),
-      setDoc(doc(db, 'ubi', 'reports'),     { list: monthlyReports, savedAt: new Date().toISOString() }),
-    ];
-    if (apiKey) tasks.push(setDoc(doc(db, 'ubi', 'config'), { apiKey, savedAt: new Date().toISOString() }));
-    await Promise.all(tasks);
-    showSyncStatus('✓ 저장됨');
-  } catch(e) {
-    console.log('saveData 실패:', e.message);
-    showSyncStatus('⚠ 저장 실패');
-  }
-  try { localStorage.setItem('ubi_data', JSON.stringify({ observations, checkpoints, monthlyReports })); } catch(e) {}
+  // localStorage 백업
+  try { localStorage.setItem('ubi_data', JSON.stringify(payload)); } catch(e) {}
 }
 
 function showSyncStatus(msg) {
@@ -1475,12 +1572,11 @@ function showSyncStatus(msg) {
   setTimeout(() => { el.textContent = ''; }, 3000);
 }
 
-// 관찰 저장은 개별로
 function saveObs() { saveData(); }
 function saveCp()  { saveData(); }
 async function saveKey(key) {
   apiKey = key;
-  await saveData();
+  localStorage.setItem(SK_KEY, key);
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1630,7 +1726,7 @@ async function deleteObs(id) {
   const idx = observations.findIndex(o => o.id === id);
   if (idx < 0) return;
   observations.splice(idx, 1);
-  await deleteOneObs(id);  // 개별 문서 삭제
+  await saveData();
   toast('삭제됐어요');
   renderAll();
 }
@@ -1745,7 +1841,7 @@ async function doAnalyze() {
 
   try {
     const res = await callAnthropic(apiKey, {
-        model: 'claude-opus-4-8',
+        model: 'claude-sonnet-4-6',
         max_tokens: 1000,
         system: SYS,
         messages: [{ role: 'user', content: userContent }]
@@ -1796,7 +1892,7 @@ async function doAnalyze() {
 async function doSave() {
   if (!pending) return;
   observations.push(pending);
-  await saveOneObs(pending);  // 개별 문서로 저장 (충돌 없음)
+  await saveData();
   pending = null;
   pendingImgs = [];
   document.getElementById('obs-text').value = '';
@@ -1900,7 +1996,7 @@ async function genReport() {
 
   try {
     const res  = await callAnthropic(apiKey, {
-      model: 'claude-opus-4-8',
+      model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       system: SYS,
       messages: [{ role: 'user', content: prompts[type] }]
@@ -2026,7 +2122,7 @@ ${summaries}
 
   try {
     const res = await callAnthropic(apiKey, {
-      model: 'claude-opus-4-8',
+      model: 'claude-sonnet-4-6',
       max_tokens: 2000,
       system: SYS,
       messages: [{ role: 'user', content: prompt }]
@@ -2131,7 +2227,7 @@ async function saveApiKey() {
   const key = document.getElementById('api-key-input').value.trim();
   if (!key || key === '(저장됨)') return;
   apiKey = key;
-  await saveData();
+  localStorage.setItem(SK_KEY, key);   // 이 기기에만 저장 (Firestore로 안 올라감)
   updateApiStatus();
   document.getElementById('api-key-input').value = '(저장됨)';
   document.getElementById('api-save-msg').textContent = '저장됐어요 ✓';
@@ -2150,7 +2246,7 @@ async function testApiKey() {
         'anthropic-version': '2023-06-01',
         'anthropic-dangerous-direct-browser-access': 'true'
       },
-      body: JSON.stringify({ model: 'claude-opus-4-8', max_tokens: 10, messages: [{ role: 'user', content: 'hi' }] })
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 10, messages: [{ role: 'user', content: 'hi' }] })
     });
     const data = await res.json();
     if (res.ok) {
@@ -2319,7 +2415,8 @@ initTheme();
 const logoAge = document.getElementById('logo-age');
 if (logoAge) logoAge.textContent = `${getUbiAgeLabel()} · 2025.10~`;
 
-loadData();
+// 인증(Google 로그인) 통과 후 loadData()로 진입
+startAuth();
 </script>
 </body>
 </html>
