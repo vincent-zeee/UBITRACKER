@@ -1209,8 +1209,8 @@ function updateTokenDisplay(thisCall, total) {
   const el3 = document.getElementById('tok-cost');
   if (el1) el1.textContent = thisCall.toLocaleString();
   if (el2) el2.textContent = total.toLocaleString();
-  // claude-sonnet-4-6: input $3/1M, output $15/1M (roughly $3 avg)
-  if (el3) el3.textContent = '$' + (total / 1000000 * 9).toFixed(4);
+  // claude-opus-4-8: input $5/1M, output $25/1M (roughly $15 avg)
+  if (el3) el3.textContent = '$' + (total / 1000000 * 15).toFixed(4);
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1745,7 +1745,7 @@ async function doAnalyze() {
 
   try {
     const res = await callAnthropic(apiKey, {
-        model: 'claude-sonnet-4-6',
+        model: 'claude-opus-4-8',
         max_tokens: 1000,
         system: SYS,
         messages: [{ role: 'user', content: userContent }]
@@ -1900,7 +1900,7 @@ async function genReport() {
 
   try {
     const res  = await callAnthropic(apiKey, {
-      model: 'claude-sonnet-4-6',
+      model: 'claude-opus-4-8',
       max_tokens: 4096,
       system: SYS,
       messages: [{ role: 'user', content: prompts[type] }]
@@ -2026,7 +2026,7 @@ ${summaries}
 
   try {
     const res = await callAnthropic(apiKey, {
-      model: 'claude-sonnet-4-6',
+      model: 'claude-opus-4-8',
       max_tokens: 2000,
       system: SYS,
       messages: [{ role: 'user', content: prompt }]
@@ -2150,7 +2150,7 @@ async function testApiKey() {
         'anthropic-version': '2023-06-01',
         'anthropic-dangerous-direct-browser-access': 'true'
       },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 10, messages: [{ role: 'user', content: 'hi' }] })
+      body: JSON.stringify({ model: 'claude-opus-4-8', max_tokens: 10, messages: [{ role: 'user', content: 'hi' }] })
     });
     const data = await res.json();
     if (res.ok) {
