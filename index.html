@@ -1191,6 +1191,7 @@ input[type="date"]:focus, select:focus { outline: none; border-color: var(--acce
   <div class="settings-card">
     <div class="settings-label">데이터 관리</div>
     <div class="settings-desc">기록은 Firebase에 실시간 저장되고 부부가 같은 데이터를 공유해요.<br>
+    사진은 Firebase Storage에 올라가고 기록에는 사진 주소만 저장돼요.<br>
     인터넷 연결이 없을 때는 기기 내부에 임시 저장되고, 연결되면 자동 동기화돼요.</div>
     <div class="settings-row">
       <button class="btn" onclick="exportJSON()">JSON 백업</button>
@@ -1380,12 +1381,19 @@ async function initFirebase() {
   try {
     const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
     const { getFirestore, doc, setDoc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    const { getStorage, ref, uploadBytes, getDownloadURL } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js');
     const { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
     const app = initializeApp(FIREBASE_CONFIG);
     db = getFirestore(app);
     window._fbDoc = doc(db, 'ubi', 'main');
     window._fbSetDoc = setDoc;
     window._fbGetDoc = getDoc;
+    // Firebase Storage (사진 저장용)
+    const storage = getStorage(app);
+    window._fbStorage = storage;
+    window._fbStorageRef = ref;
+    window._fbUploadBytes = uploadBytes;
+    window._fbGetDownloadURL = getDownloadURL;
     const auth = getAuth(app);
     try { await setPersistence(auth, browserLocalPersistence); } catch(e) {}
     window._auth = auth;
@@ -1775,17 +1783,53 @@ function renderDomainDetail(tag) {
 // ════════════════════════════════════════════════════════════
 // 이미지
 // ════════════════════════════════════════════════════════════
-function handleImgs(input) {
-  const files = Array.from(input.files);
-  files.forEach(file => {
+// 업로드 전 자동 리사이즈 + 압축 (긴 변 1600px, JPEG 품질 0.8)
+function compressImage(file, maxSize = 1600, quality = 0.8) {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = e => {
-      pendingImgs.push({ dataUrl: e.target.result, mimeType: file.type });
-      renderImgPreview();
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w >= h && w > maxSize) { h = Math.round(h * maxSize / w); w = maxSize; }
+        else if (h > w && h > maxSize) { w = Math.round(w * maxSize / h); h = maxSize; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        canvas.toBlob(blob => {
+          if (!blob) { reject(new Error('이미지 변환 실패')); return; }
+          resolve({ blob, dataUrl: canvas.toDataURL('image/jpeg', quality), mimeType: 'image/jpeg' });
+        }, 'image/jpeg', quality);
+      };
+      img.onerror = () => reject(new Error('이미지를 읽을 수 없어요'));
+      img.src = e.target.result;
     };
+    reader.onerror = () => reject(new Error('파일을 읽을 수 없어요'));
     reader.readAsDataURL(file);
   });
+}
+
+async function handleImgs(input) {
+  const files = Array.from(input.files);
+  for (const file of files) {
+    try {
+      const r = await compressImage(file);
+      pendingImgs.push({ dataUrl: r.dataUrl, mimeType: r.mimeType, blob: r.blob });
+      renderImgPreview();
+    } catch(e) {
+      toast('사진 처리 실패: ' + e.message);
+    }
+  }
   input.value = '';
+}
+
+// Firebase Storage 업로드 → 다운로드 URL 반환
+async function uploadImage(blob, id, idx) {
+  if (!window._fbStorage) throw new Error('Storage 미연결 (새로고침 후 다시)');
+  const path = `photos/${id}_${idx}.jpg`;
+  const r = window._fbStorageRef(window._fbStorage, path);
+  await window._fbUploadBytes(r, blob, { contentType: 'image/jpeg' });
+  return await window._fbGetDownloadURL(r);
 }
 
 function renderImgPreview() {
@@ -1891,6 +1935,22 @@ async function doAnalyze() {
 
 async function doSave() {
   if (!pending) return;
+  // 사진을 Firebase Storage에 업로드하고, 기록에는 다운로드 URL만 저장
+  try {
+    if (pendingImgs.length) {
+      toast('사진 업로드 중...');
+      const urls = [];
+      for (let i = 0; i < pendingImgs.length; i++) {
+        urls.push(await uploadImage(pendingImgs[i].blob, pending.id, i));
+      }
+      pending.images = urls;
+    } else {
+      pending.images = [];
+    }
+  } catch(e) {
+    toast('사진 업로드 실패: ' + e.message);
+    return;
+  }
   observations.push(pending);
   await saveData();
   pending = null;
