@@ -1344,8 +1344,8 @@ async function callAnthropic(key, body) {
   if (data.usage) {
     const used = (data.usage.input_tokens || 0) + (data.usage.output_tokens || 0);
     totalTokens += used;
-    const storedTotal = parseInt(localStorage.getItem('ubi_total_tokens') || '0') + used;
-    localStorage.setItem('ubi_total_tokens', storedTotal);
+    const storedTotal = parseInt(localStorage.getItem('ubt_total_tokens') || '0') + used;
+    localStorage.setItem('ubt_total_tokens', storedTotal);
     updateTokenDisplay(used, storedTotal);
   }
   return { ok: res.ok, status: res.status, json: () => Promise.resolve(data) };
@@ -1363,7 +1363,7 @@ function updateTokenDisplay(thisCall, total) {
 const TODAY = new Date().toISOString().split('T')[0];
 document.getElementById('obs-date').value = TODAY;
 
-const SK_KEY = 'ubi_apikey';
+const SK_KEY = 'ubt_apikey';
 
 let observations    = [];
 let checkpoints     = [];
@@ -1481,12 +1481,12 @@ ${traitsBlock}${ageNote}
 // Firebase 설정
 // ════════════════════════════════════════════════════════════
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyBUYyjtFYZ2jgNmCjsKuew_dypxXlqWH40",
-  authDomain: "imom-beta.firebaseapp.com",
-  projectId: "imom-beta",
-  storageBucket: "imom-beta.firebasestorage.app",
-  messagingSenderId: "394518246268",
-  appId: "1:394518246268:web:91b20cc24af6936c862af9"
+  apiKey: "AIzaSyCTI2lkYnoriADckJ62tdHtJJgO-OBB4YM",
+  authDomain: "ubitracker-d763b.firebaseapp.com",
+  projectId: "ubitracker-d763b",
+  storageBucket: "ubitracker-d763b.firebasestorage.app",
+  messagingSenderId: "518119132541",
+  appId: "1:518119132541:web:e3eeebc4ba594a6024d014"
 };
 
 let db = null;
@@ -1642,7 +1642,7 @@ function copyUid(el) {
 // 저장소 (계정별 분리)
 // ════════════════════════════════════════════════════════════
 function localKey() {
-  return 'ubi_data_' + (currentUser ? currentUser.uid : 'anon');
+  return 'ubt_data_' + (currentUser ? currentUser.uid : 'anon');
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1706,7 +1706,7 @@ async function loadData() {
   if (migrateChildData()) { try { await saveData(); } catch(e) {} }
 
   updateApiStatus();
-  const savedTokens = parseInt(localStorage.getItem('ubi_total_tokens') || '0');
+  const savedTokens = parseInt(localStorage.getItem('ubt_total_tokens') || '0');
   if (savedTokens > 0) {
     totalTokens = savedTokens;
     updateTokenDisplay(0, savedTokens);
@@ -1745,6 +1745,28 @@ async function saveData() {
   // Firebase 저장
   if (window._fbDoc && window._fbSetDoc) {
     try {
+      // ── 빈 데이터 덮어쓰기 가드 ──
+      // 메모리상 기록이 비어있는데 서버 문서엔 기록이 많으면, 사고(잘못된 config·새 로그인 등)일
+      // 가능성이 높다. 그대로 덮으면 데이터가 통째로 날아가므로, 한 번 멈추고 사용자 확인을 받는다.
+      if ((observations || []).length === 0 && window._fbGetDoc) {
+        try {
+          const snap = await window._fbGetDoc(window._fbDoc);
+          if (snap.exists()) {
+            const remote = snap.data() || {};
+            const remoteCount = (remote.observations || []).length;
+            if (remoteCount > 0) {
+              const ok = confirm(
+                `⚠️ 안전 확인\n\n` +
+                `지금 화면의 기록은 비어있는데, 서버에는 기록 ${remoteCount}개가 저장돼 있어요.\n` +
+                `이대로 저장하면 서버의 기록 ${remoteCount}개가 모두 사라집니다.\n\n` +
+                `정말 덮어쓸까요?\n` +
+                `(취소를 누르면 저장하지 않습니다. 데이터가 사라진 게 아니라면 취소하세요.)`
+              );
+              if (!ok) { showSyncStatus('⚠ 저장 취소됨 (서버 기록 보존)'); return; }
+            }
+          }
+        } catch(e) { /* 읽기 실패 시 가드는 통과 — 평소처럼 저장 진행 */ }
+      }
       await window._fbSetDoc(window._fbDoc, payload);
       showSyncStatus('✓ 저장됨');
     } catch(e) {
@@ -2498,11 +2520,11 @@ async function testApiKey() {
 // JSON 내보내기 / 가져오기
 // ════════════════════════════════════════════════════════════
 function exportJSON() {
-  const data = JSON.stringify({ observations, checkpoints, exportedAt: new Date().toISOString() }, null, 2);
+  const data = JSON.stringify({ observations, checkpoints, monthlyReports, childInfo, exportedAt: new Date().toISOString() }, null, 2);
   const blob = new Blob([data], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `ubi_data_${TODAY}.json`;
+  a.download = `ubitracker_backup_${TODAY}.json`;
   a.click();
   toast('내보내기 완료 ✓');
 }
@@ -2515,9 +2537,15 @@ async function handleImport(input) {
   const text = await file.text();
   try {
     const data = JSON.parse(text);
-    if (data.observations) observations = data.observations;
-    if (data.checkpoints)  checkpoints  = data.checkpoints;
+    // 백업에 들어있는 항목만 복원 (없는 항목은 현재 값 유지)
+    if (Array.isArray(data.observations))   observations   = data.observations;
+    if (Array.isArray(data.checkpoints))    checkpoints    = data.checkpoints;
+    if (Array.isArray(data.monthlyReports)) monthlyReports = data.monthlyReports;
+    if (data.childInfo)                     childInfo      = data.childInfo;
+    // 다중 아이 대비 id 백필 후 저장
+    migrateChildData();
     await saveData();
+    applyChildInfoToUI();
     renderAll();
     toast('가져오기 완료 ✓');
   } catch(e) { alert('파일 형식이 올바르지 않아요.'); }
@@ -2547,7 +2575,7 @@ function getDefaultMonthlyReports() {
 // 테마
 // ════════════════════════════════════════════════════════════
 const THEMES = ['beige', 'magenta', 'charcoal', 'navy'];
-const SK_THEME = 'ubi_theme';
+const SK_THEME = 'ubt_theme';
 
 function setTheme(name) {
   if (!THEMES.includes(name)) name = 'beige';
