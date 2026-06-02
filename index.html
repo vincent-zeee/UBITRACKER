@@ -561,7 +561,8 @@ input[type="date"]:focus, select:focus { outline: none; border-color: var(--acce
 /* ── 합성 기억 ── */
 .synthesis-textarea {
   width: 100%;
-  min-height: 120px;
+  min-height: 200px;
+  max-height: 70vh;
   padding: 12px 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -571,6 +572,7 @@ input[type="date"]:focus, select:focus { outline: none; border-color: var(--acce
   color: var(--ink);
   background: #fff;
   resize: vertical;
+  overflow-y: auto;
 }
 .synthesis-textarea:focus { outline: none; border-color: var(--accent-light); }
 .synthesis-meta {
@@ -2066,8 +2068,10 @@ ${obsLines}
       throw new Error(err.error?.message || `HTTP ${res.status}`);
     }
     const data = await res.json();
-    const text = (data.content?.[0]?.text || '').trim();
+    let text = (data.content?.[0]?.text || '').trim();
     if (!text) throw new Error('빈 응답');
+    // 마크다운 아티팩트 정리
+    text = text.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^#+\s*/gm, '').replace(/^[-·•]\s*/gm, '· ');
 
     memorySynthesis = {
       text,
@@ -2095,6 +2099,13 @@ async function saveSynthesisEdit() {
   renderSynthesisUI();
 }
 
+function autoResizeSynthesis() {
+  const el = document.getElementById('synthesis-edit');
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, window.innerHeight * 0.7) + 'px';
+}
+
 function renderSynthesisUI() {
   const container = document.getElementById('synthesis-container');
   if (!container) return;
@@ -2108,12 +2119,14 @@ function renderSynthesisUI() {
     if (memorySynthesis.editedAt) meta.push('(수정됨)');
 
     container.innerHTML = `
-      <textarea class="synthesis-textarea" id="synthesis-edit">${memorySynthesis.text}</textarea>
+      <textarea class="synthesis-textarea" id="synthesis-edit" oninput="autoResizeSynthesis()">${memorySynthesis.text}</textarea>
       <div class="synthesis-meta">${meta.join(' · ')}</div>
       <div class="settings-row" style="margin-top:8px">
         <button class="btn btn-primary" onclick="saveSynthesisEdit()">수정 저장</button>
         <button class="btn" id="btn-gen-synthesis" onclick="genSynthesis()">기억 새로 생성</button>
       </div>`;
+    // 내용에 맞게 높이 자동 조절
+    setTimeout(() => autoResizeSynthesis(), 0);
   } else {
     container.innerHTML = `
       <div style="font-size:13px;color:var(--ink3);margin:8px 0">아직 합성 기억이 없어요. 기록이 쌓이면 생성해보세요.</div>
